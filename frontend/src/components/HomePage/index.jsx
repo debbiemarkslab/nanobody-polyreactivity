@@ -18,8 +18,8 @@ const useStyles = makeStyles({
   },
 });
 
-const baseURL = "http://localhost:8080/";
-const scoreSequenceURL = baseURL + "score_sequence/";
+const baseURL = "";
+const scoreSequenceURL = baseURL + "/score_sequence/";
 
 export default function HomePage() {
   const classes = useStyles();
@@ -62,7 +62,7 @@ export default function HomePage() {
           Trigger API
         </Button>
       </Box>
-      
+
       <Box className={classes.inputSequenceBox}>
         {
           result && <p className={classes.results}>The server returned: {result}</p>
