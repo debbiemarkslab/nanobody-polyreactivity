@@ -8,10 +8,12 @@ const useStyles = makeStyles({
   inputSequenceTitleBox: {
     paddingTop: '30px',
     textAlign: 'center',
-    justifyContent: 'center',
   },
   inputSequenceBox: {
     paddingTop: '10px',
+    textAlign: 'center',
+  },
+  results: {
     textAlign: 'center',
   },
 });
@@ -22,29 +24,23 @@ const scoreSequenceURL = baseURL + "score_sequence/";
 export default function HomePage() {
   const classes = useStyles();
   const [inputSequence, setInputSequence] = useState('');
+  const [result, setResult] = useState('');
 
   const handleOnClick = async () => {
-    console.log(inputSequence)
-    const scoreSequenceURLWithQuery = scoreSequenceURL + `?sequence=${inputSequence}`
-    const fetchedResults = await fetch(scoreSequenceURLWithQuery)
+    const scoreSequenceURLWithQuery = scoreSequenceURL + `?sequence=${inputSequence}`;
+    const fetchedResult = await fetch(scoreSequenceURLWithQuery)
     .then((response) => {
-      return response.json()
+      return response.json();
     });
-    console.log(fetchedResults)
+    setResult(JSON.stringify(fetchedResult));
   }
 
   return (
     <>
-      <Box
-        component="form"
-        sx={{
-          '& > :not(style)': { m: 1, width: '25ch' },
-        }}
-        noValidate
-        className={classes.inputSequenceTitleBox}
-      >
+      <Box className={classes.inputSequenceTitleBox}>
         <h2>Input Sequence Here</h2>
       </Box>
+
       <Box
         component="form"
         sx={{
@@ -52,15 +48,25 @@ export default function HomePage() {
         }}
         noValidate
         className={classes.inputSequenceBox}
-        onChange={(e) => setInputSequence(e.target.value)}
       >
-        <TextField id="standard-basic" label="Sequence" variant="standard" />
+        <TextField
+          id="standard-basic"
+          label="Sequence"
+          variant="standard"
+          onChange={(e) => setInputSequence(e.target.value)}
+        />
         <Button
           variant="outlined"
           onClick={handleOnClick}
         >
           Trigger API
         </Button>
+      </Box>
+      
+      <Box className={classes.inputSequenceBox}>
+        {
+          result && <p className={classes.results}>The server returned: {result}</p>
+        }
       </Box>
     </>
   );
