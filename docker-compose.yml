@@ -1,0 +1,16 @@
+version: '3.9'
+services:
+  backend:
+    build: ./backend
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./backend:/nanobody-polyreactivity
+    command: ['python', 'main.py']
+  frontend:
+      build: ./frontend
+      ports:
+        - '3000:3000'
+      volumes:
+        - ./frontend:/nanobody-polyreactivity
+      command: /bin/bash -c 'yarn install && yarn upgrade && yarn start'
