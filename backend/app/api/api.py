@@ -1,6 +1,10 @@
+from app.common import score_new_sequences
+
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from pathlib import Path
 
 app = FastAPI()
 
@@ -17,22 +21,20 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-
-# @router.get('/list/', response_model=List[str], tags=['Proteins'])
-# async def get_protein_names(db: Session = Depends(deps.get_db)):
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-
 @app.get('/score_sequence/')
 def score_new_sequence(
     sequence: str
 ):
-    # You can do whatever you want here with the input sequence.
-    # Currently, I'm just returning it as the value in a dictionary where the key
-    # is 'input_sequence'
-    # But you can also run any function (like the ones in score_new_sequences.py)
-    # with this input sequence! And you can return a value or a file or whatever
-    # from here too
-    return {'input_sequence': sequence}
+    # Example of using an imported function on the input parameter "sequence"
+    sequence_with_dumb_prefix = score_new_sequences.example_function(sequence)
+
+    # Make sure the results directory exists, if not, make it
+    results_dir = '/nanobody-polyreactivity/results'
+    Path(results_dir).mkdir(parents=True, exist_ok=True)
+    file_name = 'results.txt'
+    file_path = os.path.join(results_dir, file_name)
+
+    with open(file_path, 'w') as f:
+        f.write(sequence_with_dumb_prefix)
+
+    return FileResponse(file_path, media_type='application/octet-stream', filename=file_name)

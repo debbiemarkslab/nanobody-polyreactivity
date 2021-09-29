@@ -1,3 +1,7 @@
+aiofiles
+biopython
 fastapi
+numpy
+pandas
 pydantic
 uvicorn

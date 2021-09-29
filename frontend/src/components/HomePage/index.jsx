@@ -24,15 +24,20 @@ const scoreSequenceURL = baseURL + "/score_sequence/";
 export default function HomePage() {
   const classes = useStyles();
   const [inputSequence, setInputSequence] = useState('');
-  const [result, setResult] = useState('');
+  const [resultStr, setResultStr] = useState('');
+  const [downloadUrl, setDownloadUrl] = useState('');
+  const resultsFileName = 'results.txt';
 
-  const handleOnClick = async () => {
-    const scoreSequenceURLWithQuery = scoreSequenceURL + `?sequence=${inputSequence}`;
-    const fetchedResult = await fetch(scoreSequenceURLWithQuery)
+  const sendSequenceButtonOnClick = async () => {
+    const scoreSequenceURLWithQuery = scoreSequenceURL + `?sequence=${JSON.stringify(inputSequence)}`;
+    const fetchedResultBlob = await fetch(scoreSequenceURLWithQuery)
     .then((response) => {
-      return response.json();
+      return response.blob();
     });
-    setResult(JSON.stringify(fetchedResult));
+    const url = window.URL.createObjectURL(fetchedResultBlob);
+    setDownloadUrl(url);
+    const resultText = await fetchedResultBlob.text();
+    setResultStr(`${resultText}`);
   }
 
   return (
@@ -53,11 +58,12 @@ export default function HomePage() {
           id="standard-basic"
           label="Sequence"
           variant="standard"
+          multiline
           onChange={(e) => setInputSequence(e.target.value)}
         />
         <Button
           variant="outlined"
-          onClick={handleOnClick}
+          onClick={sendSequenceButtonOnClick}
         >
           Trigger API
         </Button>
@@ -65,7 +71,22 @@ export default function HomePage() {
 
       <Box className={classes.inputSequenceBox}>
         {
-          result && <p className={classes.results}>The server returned: {result}</p>
+          downloadUrl &&
+          <Button
+            variant="outlined"
+            href={downloadUrl}
+            download={resultsFileName}
+          >
+            Download Results
+          </Button>
+        }
+        {
+          resultStr &&
+          <p>
+            <b>Results have arrived! You can download them above or view the contents of the results file below:</b>
+            <br/>
+            {resultStr}
+          </p>
         }
       </Box>
     </>
