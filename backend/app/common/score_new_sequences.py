@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import re
+from pathlib import Path
 
 def example_function(seq):
     return f'The sequence is: {seq}'
@@ -147,29 +148,30 @@ def extract_cdrs(file):
     df['CDR3_glycosylation'] = df['CDR3_nogaps'].apply(lambda x: find_glyc(x))
     return df
 
-def main():
-    seq_strings = '>sample_seq1\nQVQLVESGGGLVQAGGSLRLSCAASGLIFYDNMGWYRQAPGKERELVAAISSSGGSTSYADSVKGRFTISRDNAKNTVYLQMNSLKPEDTAVYYCAADSYPAYLGFVGFDYWGQGTQVTVSS\n>sample_seq2\nQVQLVESGGGLVQAGGSLRLSCAASGFTFVYYVMGWYRQAPGKERELVAAINAGGGSTYYADSVKGRFTISRDNAKNTVYLQMNSLKPEDTAVYYCNARVRVRLGRNWSSYYYWGQGTQVTVSS'
+def main(seq_strings):
 
-    with open('sample_sequences.fa', 'w') as f:
-        for l in seq_strings.split('\n'):
+    results_dir = '/nanobody-polyreactivity/results'
+    Path(results_dir).mkdir(parents=True, exist_ok=True)
+
+    with open('/nanobody-polyreactivity/results/sample_sequences.fa', 'w') as f:
+        for l in seq_strings[1:-1].split('\\n'):
             f.write(l+'\n')
 
-    subprocess.run("ANARCI -i sample_sequences.fa -o sample_sequences -s i --csv",shell=True,capture_output=True)
+    subprocess.run("ANARCI -i /nanobody-polyreactivity/results/sample_sequences.fa -o /nanobody-polyreactivity/results/sample_sequences -s i --csv",shell=True,capture_output=True)
 
-    df = extract_cdrs('sample_sequences_H.csv')
+    df = extract_cdrs('/nanobody-polyreactivity/results/sample_sequences_H.csv')
 
-    m = pickle.load(open('./models/logistic_regression_onehot_CDRS.sav', 'rb'))
+    m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
     X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
     y_score = m.decision_function(X_test)
     y_pred = m.predict(X_test)
     df['logistic_regression_onehot_CDRS'] = y_score
 
-    m = pickle.load(open('./models/logistic_regression_3mer_CDRS.sav', 'rb'))
+    m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_3mer_CDRS.sav', 'rb'))
     X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'],k=3)
     y_score = m.decision_function(X_test)
     y_pred = m.predict(X_test)
     df['logistic_regression_3mer_CDRS'] = y_score
-    df.to_csv('sample_sequences_scores.csv')
-
-if __name__ == "__main__":
-    main()
+    file_path = '/nanobody-polyreactivity/results/sample_sequences_scores.csv'
+    df.to_csv(file_path)
+    return file_path
