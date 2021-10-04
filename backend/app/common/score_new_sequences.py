@@ -5,6 +5,9 @@ import numpy as np
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import re
 
+def example_function(seq):
+    return f'The sequence is: {seq}'
+
 def get_kmer_list(seq, include_framework='',kmer_len=3):
     if 'C' in include_framework:
         seq = 'C' + seq
@@ -23,7 +26,7 @@ def get_kmer_list(seq, include_framework='',kmer_len=3):
                 kmer_counts[kmer] = 1
         k += 1
     return [(key,val) for key,val in kmer_counts.items()]
-    
+
 def cdr_seqs_to_kmer(seqs, include_framework='',k=3):
     seq_to_kmer_vector = {}
     aa_list = 'ACDEFGHIKLMNPQRSTVWY'
@@ -43,7 +46,7 @@ def cdr_seqs_to_kmer(seqs, include_framework='',k=3):
         # Make into kmers
         kmer_data_list = get_kmer_list(seq, include_framework=include_framework,kmer_len=k)
         #print(len(kmer_data_list))
-        
+
         norm_val = 0.
         for kmer,count in kmer_data_list:
             count = float(count)
@@ -108,7 +111,7 @@ kd = { 'A': 1.8,'R':-4.5,'N':-3.5,'D':-3.5,'C': 2.5,
 def hp_index(seq,kd=kd):
     hp_ix = 0
     for a in seq:
-        hp_ix += kd[a]    
+        hp_ix += kd[a]
     return hp_ix/len(seq)
 
 N_glycosylation_pattern = 'N[^P][ST][^P]'

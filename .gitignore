@@ -1,0 +1,7 @@
+*.env
+frontend/yarn.lock
+frontend/node_modules
+backend/results
+*.DS_Store
+*.swp
+*pycache*
