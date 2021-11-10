@@ -1,7 +1,7 @@
 from app.common import score_new_sequences
 
-import os
-from fastapi import FastAPI
+import asyncio, os, uuid
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pathlib import Path
@@ -17,24 +17,42 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+    allow_methods=['*'],
+    allow_headers=['*']
 )
 
-@app.get('/score_sequence/')
-def score_new_sequence(
-    sequence: str
-):
-    # Example of using an imported function on the input parameter "sequence"
-    file_path = score_new_sequences.main(sequence)
+@app.get('/scores/{identifier}/')
+async def get_scores_for_sequence(identifier: str):
+    scores_filepath = f'/nanobody-polyreactivity/results/{identifier}_scores.csv'
+    if not os.path.exists(scores_filepath):
+        raise HTTPException(status_code=404, detail='Results file not found.')
+    return FileResponse(scores_filepath, media_type='application/octet-stream')
 
-    # Make sure the results directory exists, if not, make it
-    # results_dir = '/nanobody-polyreactivity/results'
-    # Path(results_dir).mkdir(parents=True, exist_ok=True)
-    # file_name = 'results.txt'
-    # file_path = os.path.join(results_dir, file_name)
+@app.get('/score_sequences/')
+async def score_sequences(sequences: str):
+    inputs_dir = '/nanobody-polyreactivity/inputs'
+    Path(inputs_dir).mkdir(parents=True, exist_ok=True)
 
-    # with open(file_path, 'w') as f:
-    #     f.write(sequence_with_dumb_prefix)
+    identifier = str(uuid.uuid4())
+    sequences_filepath = f'/nanobody-polyreactivity/inputs/{identifier}.fa'
+    with open(sequences_filepath, 'w') as f:
+        for l in sequences[1:-1].split('\\n'):
+            f.write(l+'\n')
 
-    return FileResponse(file_path, media_type='application/octet-stream')
+    asyncio.create_task(score_new_sequences.score_sequences(sequences_filepath, identifier))
+    return {'identifier': identifier}
+
+@app.post('/score_sequences_file/')
+async def score_sequences_file(sequences_file: UploadFile = File(...)):
+    inputs_dir = '/nanobody-polyreactivity/inputs'
+    Path(inputs_dir).mkdir(parents=True, exist_ok=True)
+
+    identifier = str(uuid.uuid4())
+    sequences_filepath = f'/nanobody-polyreactivity/inputs/{identifier}.fa'
+    with open(sequences_filepath, 'w') as f:
+        file_bytes = await sequences_file.read()
+        sequences = file_bytes.decode('utf-8')
+        f.write(sequences)
+
+    asyncio.create_task(score_new_sequences.score_sequences(sequences_filepath, identifier))
+    return {'identifier': identifier}

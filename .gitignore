@@ -2,6 +2,7 @@
 frontend/yarn.lock
 frontend/node_modules
 backend/results
+backend/inputs
 *.DS_Store
 *.swp
 *pycache*
