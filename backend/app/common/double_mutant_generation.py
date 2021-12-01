@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 import argparse
 
+'''
+script intakes a one sequence csv created by ANARCI/IMGT and outputs all possible double mutants
+'''
 parser = argparse.ArgumentParser("double mutation generation")
 parser.add_argument('--sequence','-s',help = 'csv with one sequence and CDRS already defined via IMGT')
 parser.add_argument('--destination','-d',help = 'basename and path of csv output')
