@@ -30,6 +30,7 @@ export default function ResultsTable(props) {
       setResults(resultsArr);
     };
     fetchResultsData();
+    // eslint-disable-next-line
   }, [resultsCSVStr]);
 
   return (

@@ -36,12 +36,14 @@ export default function ResultsPage() {
   const classes = useStyles();
   const navigate = useNavigate();
   const { resultsId } = useParams();
+  const [resultsIdValid, setResultsIdValid] = useState(false);
   const [resultsIdInput, setResultsIdInput] = useState('');
   const [resultsStr, setResultsStr] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
 
   useEffect(() => {
     const getScoresForId = async () => {
+      setResultsIdValid(false);
       if (!resultsId) {
         return;
       }
@@ -60,6 +62,7 @@ export default function ResultsPage() {
       const url = window.URL.createObjectURL(fetchedResultBlob);
       setDownloadUrl(url);
       const resultText = await fetchedResultBlob.text();
+      setResultsIdValid(true);
       setResultsStr(`${resultText}`);
     }
     getScoresForId();
@@ -142,7 +145,7 @@ export default function ResultsPage() {
           showResultsSearchBar()
         }
         {
-          resultsId &&
+          resultsIdValid &&
           showResults()
         }
       </Grid>
