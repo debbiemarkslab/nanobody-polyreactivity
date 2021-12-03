@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import argparse
+
 
 '''
 script intakes a one sequence csv created by ANARCI/IMGT and outputs all possible double mutants
