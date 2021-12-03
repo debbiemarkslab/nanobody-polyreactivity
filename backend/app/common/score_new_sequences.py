@@ -5,6 +5,40 @@ import numpy as np
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import re
 from pathlib import Path
+from double_mutant_generation import generate_doubles
+from models import CNN, RNN
+import torch
+
+def test(model, test_loader):
+    scores = []
+    for seq_array, labels in test_loader: 
+        inputs = torch.reshape(seq_array,(seq_array.shape[0],seq_array.shape[2],seq_array.shape[1])).float()
+        labels = labels.reshape(-1,1)
+        outputs = model(inputs)
+        predicted = torch.zeros(outputs.shape[0],outputs.shape[1])
+        for i, out in enumerate(outputs):
+            if out > 0.5:
+                predicted[i,0]=1
+            else:
+                predicted[i,0]=0
+        predicted = predicted.squeeze()
+        outputs = outputs.squeeze().tolist()
+        if type(outputs) == float:
+            outputs = [outputs]
+        scores.extend(outputs)
+    return scores
+
+def return_scores(test_df,model,filepath):
+    test_dataset = OneHotArrayDataset(test_df,'CDRS_withgaps')
+    test_loader = torch.utils.data.DataLoader(dataset = test_dataset,  
+                                                  batch_size = 64,  
+                                                  shuffle = False)
+    model.load_state_dict(torch.load(filepath))
+    model.eval()
+    final_scores = test(model, test_loader)
+    return final_scores
+
+
 
 def example_function(seq):
     return f'The sequence is: {seq}'
@@ -158,7 +192,9 @@ async def score_sequences(
     subprocess.run(f'ANARCI -i {sequences_filepath} -o {results_dir}/{identifier} -s i --csv', shell=True, capture_output=True)
 
     df = extract_cdrs(f'{results_dir}/{identifier}_H.csv')
-
+    if len(df)==1:
+        df = generate_doubles(df)
+        
     m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
     X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
     y_score = m.decision_function(X_test)
@@ -170,6 +206,22 @@ async def score_sequences(
     y_score = m.decision_function(X_test)
     y_pred = m.predict(X_test)
     df['logistic_regression_3mer_CDRS'] = y_score
+
+    model = CNN()
+    filepath = '/nanobody-polyreactivity/app/models/cnn_20.tar'
+    df['cnn_20'] = return_scores(df,model,filepath)
+
+    model = CNN()
+    filepath = '/nanobody-polyreactivity/app/models/cnn_CDRS_full_10.tar'
+    df['cnn_20'] = return_scores(df,model,filepath)
+
+    model = RNN()
+    filepath = '/nanobody-polyreactivity/app/models/rnn_20.tar'
+    df['cnn_20'] = return_scores(df,model,filepath)
+
+    model = RNN()
+    filepath = '/nanobody-polyreactivity/app/models/rnn_CDRS_full_20.tar'
+    df['cnn_20'] = return_scores(df,model,filepath)
 
     results_filepath = f'{results_dir}/{identifier}_scores.csv'
     df.to_csv(results_filepath)
