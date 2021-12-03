@@ -6,3 +6,4 @@ pandas
 pydantic
 python-multipart
 uvicorn
+torch
