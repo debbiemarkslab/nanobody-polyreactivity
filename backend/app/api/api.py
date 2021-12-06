@@ -35,10 +35,11 @@ async def score_sequences(sequences: str):
 
     identifier = str(uuid.uuid4())
     sequences_filepath = f'/nanobody-polyreactivity/inputs/{identifier}.fa'
+    print('writing sequence to fasta file')
     with open(sequences_filepath, 'w') as f:
         for l in sequences[1:-1].split('\\n'):
             f.write(l+'\n')
-
+    print('finished writing sequence to fasta file')
     asyncio.create_task(score_new_sequences.score_sequences(sequences_filepath, identifier))
     return {'identifier': identifier}
 

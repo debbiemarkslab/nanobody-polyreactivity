@@ -5,13 +5,95 @@ import numpy as np
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import re
 from pathlib import Path
-# from app.double_mutant_generation import generate_doubles
-# from app.models import CNN, RNN
+from torch.utils.data import Dataset
+# from double_mutant_generation import generate_doubles
+# from models import CNN, RNN
 import torch
 '''
 script intakes a one sequence csv created by ANARCI/IMGT and outputs all possible double mutants
 '''
 aa_list = np.asarray(list('ACDEFGHIKLMNPQRSTVWY-'))
+class SequencesToOneHot():
+    def __init__(self, alphabet='protein'):
+        if alphabet == 'protein':
+            self.aa_list = 'ACDEFGHIKLMNPQRSTVWY'
+        else:
+            self.aa_list = 'ACGT'
+        self.aa_dict = {}
+        for i,aa in enumerate(self.aa_list):
+            self.aa_dict[aa] = i
+    def one_hot_3D(self, s):
+        x = np.zeros((len(s), len(self.aa_list)))
+        for i, letter in enumerate(s):
+            if letter in self.aa_dict:
+                x[i , self.aa_dict[letter]] = 1
+        return x
+    def cdr_seqs_to_arr(self, df_annot, cdr='CDRS_withgaps'):
+        #print(df_annot.loc[0,cdr])
+        onehot_array = np.empty((len(df_annot[cdr]),len(df_annot.iloc[0].loc[cdr]),20))
+        #print(onehot_array.shape)
+        #print(onehot_array.shape)
+        
+        for s, seq in enumerate(df_annot[cdr].values):
+            if type(seq)==float:
+                seq = ''
+            seq = seq.upper()
+            #print(df_annot[cdr][s])
+            #print(self.one_hot_3D(df_annot[cdr][s]).shape)
+            #print(s)
+            #print(seq)
+            onehot_array[s] = self.one_hot_3D(seq)
+        # FOR CNN, comment next line
+        #onehot_array = onehot_array.reshape(len(df_annot[cdr]),len(df_annot[cdr][0])*20)
+        return onehot_array
+
+class SequencesToOneHot_nonaligned():
+    def __init__(self, alphabet='protein'):
+        if alphabet == 'protein':
+            self.aa_list = 'ACDEFGHIKLMNPQRSTVWY'
+        else:
+            self.aa_list = 'ACGT'
+        self.aa_dict = {}
+        for i,aa in enumerate(self.aa_list):
+            self.aa_dict[aa] = i
+    def one_hot_3D(self, s):
+        x = np.zeros((len(s), len(self.aa_list)))
+        for i, letter in enumerate(s):
+            if letter in self.aa_dict:
+                x[i , self.aa_dict[letter]] = 1
+        return x
+    def cdr_seqs_to_arr(self, df_annot, max_len=39, cdr='CDRS_withgaps'):
+        #print(df_annot.loc[0,cdr])
+        onehot_array = np.empty((len(df_annot[cdr]),max_len,20))
+        #print(onehot_array.shape)
+        #print(onehot_array.shape)
+        for s, seq in enumerate(df_annot[cdr].values):
+            #print(df_annot[cdr][s])
+            #print(self.one_hot_3D(df_annot[cdr][s]).shape)
+            #print(s)
+            #print(seq)
+            if type(seq)==float:
+                seq = ''
+            new_seq = seq.upper() + '-'*(max_len-len(seq))
+            onehot_array[s] = self.one_hot_3D(new_seq)
+        # FOR CNN, comment next line
+        #onehot_array = onehot_array.reshape(len(df_annot[cdr]),len(df_annot[cdr][0])*20)
+        return onehot_array
+class OneHotArrayDataset(Dataset):
+    def __init__(self, df, cdr):
+        try: df['exp_phenotype_binary']
+        except: df['exp_phenotype_binary']=1
+        self.samples = []
+        k = SequencesToOneHot()
+        arr = k.cdr_seqs_to_arr(df,cdr=cdr)
+        for x, y in zip(arr, df['exp_phenotype_binary']):
+            self.samples.append((x, y))
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        return self.samples[idx]
 
 def within_CDR(input_seq, double_mutants_dict, seq, i, a, CDR: str):
     '''
@@ -97,6 +179,7 @@ def generate_doubles(input_seq_df):
     key = input_seq['Id']+'_WT'
     double_mutants_dict[key] = [input_seq['CDR1_withgaps'],input_seq['CDR2_withgaps'],input_seq['CDR3_withgaps'],input_seq['CDRS_withgaps']]
 
+    print('generating mutations in CDR1!')
     seq = input_seq['CDR1_withgaps']
     for i in range(len(seq)): # iterating through the length of the CDR1 sequence
         for a in aa_list[aa_list != seq[i]]: # iterating through aa list, excluding the aa at that pos already
@@ -117,7 +200,8 @@ def generate_doubles(input_seq_df):
             
             # generating mutants between CDR1 and CDR3
             double_mutants_dict = between_CDRS(input_seq, double_mutants_dict, seq, i, a, 'CDR1', 'CDR3')
-            
+    print('done generating mutations in CDR1!')
+    print('generating mutations in CDR2!')
     seq = input_seq['CDR2_withgaps'] 
     for i in range(len(seq)): # iterating through entire length of CDR2
         for a in aa_list[aa_list != seq[i]]:
@@ -135,7 +219,8 @@ def generate_doubles(input_seq_df):
 
             # generating mutants between CDR2 and CDR3
             double_mutants_dict = between_CDRS(input_seq, double_mutants_dict, seq, i, a, 'CDR2', 'CDR3')
-
+    print('done generating mutations in CDR2!')  
+    print('generating mutations in CDR3')  
     seq = input_seq['CDR3_withgaps']
     for i in range(len(seq)): # iterating through entire length of CDR3
         for a in aa_list[aa_list != seq[i]]:
@@ -148,7 +233,7 @@ def generate_doubles(input_seq_df):
 
             # generating mutants within CDR3
             double_mutants_dict = within_CDR(input_seq, double_mutants_dict, seq, i, a,'CDR3')
-
+    print('done generating mutations in CDR3')  
     df_double_muts = pd.DataFrame.from_dict(double_mutants_dict,orient='index',columns=['CDR1_withgaps', 'CDR2_withgaps', 'CDR3_withgaps','CDRS_withgaps'])
 
     df_double_muts['CDRS_nogaps'] = df_double_muts['CDRS_withgaps'].str.replace('-','')
@@ -163,7 +248,7 @@ def generate_doubles(input_seq_df):
     df_double_muts['CDR1_nogaps'] = df_double_muts['CDR1_withgaps'].str.replace('-','')
     df_double_muts['CDR2_nogaps'] = df_double_muts['CDR2_withgaps'].str.replace('-','')
     df_double_muts['CDR3_nogaps'] = df_double_muts['CDR3_withgaps'].str.replace('-','')
-
+    print('starting to label mutations')  
     # labeling if insertion, deletion or missense
     df_double_muts.loc[df_double_muts.Id.str.contains(r'[^(CDR)]+CDR\d_-\d+\w$'),'mut1_type'] = 'insertion'
     df_double_muts.loc[df_double_muts.Id.str.contains(r'[^(CDR)]+CDR\d_\w\d+-$'),'mut1_type'] = 'deletion'
@@ -182,13 +267,13 @@ def generate_doubles(input_seq_df):
     df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_\w\d+\w'),'mut2_type'] = 'missense'
     df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'mut2_loc'] = df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'Id'].str.findall(r'CDR\d_.\d+._CDR\d_.(\d+).').apply(lambda x: x[0])
     df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'mut2'] = df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'Id'].str.findall(r'CDR\d_.\d+._CDR\d_.\d+(.)').apply(lambda x: x[0])
-
+    print('done labeling mutations')
 
     seqs_to_drop = (df_double_muts['CDR3_withgaps'].str.contains(r'-[^-]-') | df_double_muts['CDR3_withgaps'].str.contains(r'-[^-][^-]-'))
     print(sum(seqs_to_drop))
     df_double_muts = df_double_muts[~seqs_to_drop]
     return df_double_muts
-import torch
+
 class CNN(torch.nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
@@ -261,7 +346,7 @@ class RNN(torch.nn.Module):
         
         out = self.sigmoid(out)
         return out
-        
+
 def test(model, test_loader):
     scores = []
     for seq_array, labels in test_loader: 
@@ -441,13 +526,18 @@ async def score_sequences(
 ):
     results_dir = '/nanobody-polyreactivity/results'
     Path(results_dir).mkdir(parents=True, exist_ok=True)
-
-    subprocess.run(f'ANARCI -i {sequences_filepath} -o {results_dir}/{identifier} -s i --csv', shell=True, capture_output=True)
-
-    df = extract_cdrs(f'{results_dir}/{identifier}_H.csv')
-    if len(df)==1:
-        df = generate_doubles(df)
-        
+    with open('/nanobody-polyreactivity/logs.txt','w+',buffering=2) as f:
+        f.write('run ANARCI')
+        subprocess.run(f'ANARCI -i {sequences_filepath} -o {results_dir}/{identifier} -s i --csv', shell=True, capture_output=True)
+        f.write('done running ANARCI')
+        f.write('extract CDRS')
+        df = extract_cdrs(f'{results_dir}/{identifier}_H.csv')
+        f.write('done extracting CDRS')
+        if len(df)==1:
+            f.write('generating doubles!')
+            df = generate_doubles(df)
+            f.write('done generating doubles! :-)')
+            
     m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
     X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
     y_score = m.decision_function(X_test)
@@ -464,17 +554,17 @@ async def score_sequences(
     filepath = '/nanobody-polyreactivity/app/models/cnn_20.tar'
     df['cnn_20'] = return_scores(df,model,filepath)
 
-    model = CNN()
-    filepath = '/nanobody-polyreactivity/app/models/cnn_CDRS_full_10.tar'
-    df['cnn_20'] = return_scores(df,model,filepath)
+    # model = CNN()
+    # filepath = '/nanobody-polyreactivity/app/models/cnn_CDRS_full_10.tar'
+    # df['cnn_full_10'] = return_scores(df,model,filepath)
 
-    model = RNN()
-    filepath = '/nanobody-polyreactivity/app/models/rnn_20.tar'
-    df['cnn_20'] = return_scores(df,model,filepath)
+    # model = RNN()
+    # filepath = '/nanobody-polyreactivity/app/models/rnn_20.tar'
+    # df['rnn_20'] = return_scores(df,model,filepath)
 
-    model = RNN()
-    filepath = '/nanobody-polyreactivity/app/models/rnn_CDRS_full_20.tar'
-    df['cnn_20'] = return_scores(df,model,filepath)
+    # model = RNN()
+    # filepath = '/nanobody-polyreactivity/app/models/rnn_CDRS_full_20.tar'
+    # df['rnn_20_full_20'] = return_scores(df,model,filepath)
 
     results_filepath = f'{results_dir}/{identifier}_scores.csv'
     df.to_csv(results_filepath)
