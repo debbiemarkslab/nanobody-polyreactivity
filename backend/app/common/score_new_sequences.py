@@ -527,32 +527,42 @@ async def score_sequences(
     results_dir = '/nanobody-polyreactivity/results'
     Path(results_dir).mkdir(parents=True, exist_ok=True)
     with open('/nanobody-polyreactivity/logs.txt','w+',buffering=2) as f:
-        f.write('run ANARCI')
+        f.write('\nrun ANARCI')
         subprocess.run(f'ANARCI -i {sequences_filepath} -o {results_dir}/{identifier} -s i --csv', shell=True, capture_output=True)
-        f.write('done running ANARCI')
-        f.write('extract CDRS')
+        f.write('\ndone running ANARCI')
+        f.write('\nextract CDRS')
         df = extract_cdrs(f'{results_dir}/{identifier}_H.csv')
-        f.write('done extracting CDRS')
+        f.write('\ndone extracting CDRS')
         if len(df)==1:
-            f.write('generating doubles!')
+            f.write('\ngenerating doubles!')
             df = generate_doubles(df)
-            f.write('done generating doubles! :-)')
-            
-    m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
-    X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
-    y_score = m.decision_function(X_test)
-    y_pred = m.predict(X_test)
-    df['logistic_regression_onehot_CDRS'] = y_score
-
-    m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_3mer_CDRS.sav', 'rb'))
-    X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'],k=3)
-    y_score = m.decision_function(X_test)
-    y_pred = m.predict(X_test)
-    df['logistic_regression_3mer_CDRS'] = y_score
-
-    model = CNN()
-    filepath = '/nanobody-polyreactivity/app/models/cnn_20.tar'
-    df['cnn_20'] = return_scores(df,model,filepath)
+            f.write('\ndone generating doubles! :-)')
+        f.write('\nopening pickl')
+        m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
+        f.write('\ndone opening pickl, making cdr_seqs to onehot')
+        X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
+        f.write('\ndone converting cdrseqs to onehot, starting scoring ')
+        y_score = m.decision_function(X_test)
+        f.write('\ndone scoring')
+        y_pred = m.predict(X_test)
+        f.write('\nwriting scores to file')
+        df['logistic_regression_onehot_CDRS'] = y_score
+        f.write('\ndone writing scores to file')
+        
+    with open('/nanobody-polyreactivity/logs2.txt','w+',buffering=2) as f:
+        f.write('\nopening pickl2')
+        m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_3mer_CDRS.sav', 'rb'))
+        f.write('\ndone opening pickl, making cdr_seqs to onehot')
+        X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'],k=3)
+        f.write('\ndone converting cdrseqs to onehot, starting scoring ')
+        y_score = m.decision_function(X_test)
+        f.write('\ndone scoring')
+        y_pred = m.predict(X_test)
+        df['logistic_regression_3mer_CDRS'] = y_score
+        f.write('\nwriting scores to file')
+    # model = CNN()
+    # filepath = '/nanobody-polyreactivity/app/models/cnn_20.tar'
+    # df['cnn_20'] = return_scores(df,model,filepath)
 
     # model = CNN()
     # filepath = '/nanobody-polyreactivity/app/models/cnn_CDRS_full_10.tar'
