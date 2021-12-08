@@ -10,6 +10,8 @@ from app.common.double_mutant_generation import generate_doubles
 from app.common.models import CNN, RNN
 import torch
 from app.common.utils import test_cnn,test_rnn, NonAlignedOneHotArrayDataset,OneHotArrayDataset,return_scores
+import warnings
+warnings.filterwarnings("ignore")
 '''
 script intakes a one sequence csv created by ANARCI/IMGT and outputs all possible double mutants
 '''
@@ -176,69 +178,80 @@ async def score_sequences(
 ):
     results_dir = '/nanobody-polyreactivity/results'
     Path(results_dir).mkdir(parents=True, exist_ok=True)
-    with open('/nanobody-polyreactivity/logs.txt','w+',buffering=2) as f:
-        f.write('\nrun ANARCI')
-        subprocess.run(f'ANARCI -i {sequences_filepath} -o {results_dir}/{identifier} -s i --csv', shell=True, capture_output=True)
-        f.write('\ndone running ANARCI')
-        f.write('\nextract CDRS')
-        df = extract_cdrs(f'{results_dir}/{identifier}_H.csv')
-        f.write('\ndone extracting CDRS')
-        if len(df)==1:
-            f.write('\ngenerating doubles!')
-            df = generate_doubles(df)
-            f.write('\ndone generating doubles! :-)')
-        f.write('\nopening pickl')
-        m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
-        f.write('\ndone opening pickl, making cdr_seqs to onehot')
-        X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
-        f.write('\ndone converting cdrseqs to onehot, starting scoring ')
+    subprocess.run(f'ANARCI -i {sequences_filepath} -o {results_dir}/{identifier} -s i --csv', shell=True, capture_output=True)
+    df = extract_cdrs(f'{results_dir}/{identifier}_H.csv')
+    if len(df)==1:
+        df = generate_doubles(df)
+
+    # scoring sequences!
+
+    # log reg
+    m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
+    X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
+    y_score = m.decision_function(X_test)
+    y_pred = m.predict(X_test)
+    df['logistic_regression_onehot_CDRS'] = y_score
+    batch_size = 1024
+    print('finished logreg onehot')
+
+    # log reg with 3mers
+    m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_3mer_CDRS.sav', 'rb'))
+    if len(df)<batch_size:
+        X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'])
         y_score = m.decision_function(X_test)
-        f.write('\ndone scoring')
-        y_pred = m.predict(X_test)
-        f.write('\nwriting scores to file')
-        df['logistic_regression_onehot_CDRS'] = y_score
-        f.write('\ndone writing scores to file')
-    with open('/nanobody-polyreactivity/logs2.txt','w+',buffering=2) as f:
-        f.write('\nopening pickl2')
-        m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_3mer_CDRS.sav', 'rb'))
-        f.write('\ndone opening pickl, making cdr_seqs to onehot')
-        X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'],k=3)
-        f.write('\ndone converting cdrseqs to onehot, starting scoring ')
-        y_score = m.decision_function(X_test)
-        f.write('\ndone scoring')
-        y_pred = m.predict(X_test)
         df['logistic_regression_3mer_CDRS'] = y_score
-        f.write('\nwriting scores to file')
-    
+    else:
+        df['logistic_regression_3mer_CDRS'] = np.nan
+        for batch_tick in np.append(np.arange(batch_size,len(df),batch_size),len(df)):
+            X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'].iloc[batch_tick-batch_size:batch_tick],k=3)
+            y_score = m.decision_function(X_test)
+            df['logistic_regression_3mer_CDRS'].iloc[batch_tick-batch_size:batch_tick] = y_score
+    print('finished logreg 3mers')
+
+    # CNN
     model = CNN(input_size = 7)
     filepath = '/nanobody-polyreactivity/app/models/cnn_20.tar'
     df['cnn_20'] = return_scores(df,model,filepath)
-    
+    print('finished cnn')
+    # RNN
     model = RNN(input_size = 20,
                 hidden_size = 128,
                 num_layers = 2,
                 num_classes = 1)
     filepath = '/nanobody-polyreactivity/app/models/rnn_20.tar'
     df['rnn_20'] = return_scores(df,model,filepath,region = 'CDRS_nogaps',model_type='rnn')
-    
+    print('finished rnn')
+
+    # RNN full
     filepath = '/nanobody-polyreactivity/app/models/rnn_CDRS_full_20.tar'
     df['rnn_20_full'] = return_scores(df,model,filepath,region = 'CDRS_nogaps_full',model_type='rnn',max_len = 40)
+    print('finished rnn full')
 
+    # CNN full
     model = CNN(input_size = 8)
     filepath = '/nanobody-polyreactivity/app/models/cnn_CDRS_full_10.tar'
     df['cnn_full_10'] = return_scores(df,model,filepath,region = 'CDRS_withgaps_full')
+    print('finished cnn full')
 
+    # logreg 3mers full
     m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_3mer_CDRS_full.sav', 'rb'))
-    X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'],k=3)
-    y_score = m.decision_function(X_test)
-    y_pred = m.predict(X_test)
-    df['logistic_regression_3mer_CDRS_full'] = y_score
+    if len(df)<batch_size:
+        X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'])
+        y_score = m.decision_function(X_test)
+        df['logistic_regression_3mer_CDRS_full'] = y_score
+    else:
+        df['logistic_regression_3mer_CDRS_full'] = np.nan
+        for batch_tick in np.append(np.arange(batch_size,len(df),batch_size),len(df)):
+            X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'].iloc[batch_tick-batch_size:batch_tick],k=3)
+            y_score = m.decision_function(X_test)
+            df['logistic_regression_3mer_CDRS_full'].iloc[batch_tick-batch_size:batch_tick] = y_score
+    print('finished logreg 3mers full')
 
+    # logreg full
     m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS_full.sav', 'rb'))
     X_test = cdr_seqs_to_onehot(df['CDRS_withgaps_full'])
     y_score = m.decision_function(X_test)
-    y_pred = m.predict(X_test)
     df['logistic_regression_onehot_CDRS_full'] = y_score
-
+    print('finished logreg onehot full')
     results_filepath = f'{results_dir}/{identifier}_scores.csv'
     df.to_csv(results_filepath)

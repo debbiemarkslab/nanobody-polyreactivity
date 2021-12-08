@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 import pandas as pd
 import numpy as np
 import torch
+import pickle
 
 class SequencesToOneHot():
     def __init__(self, alphabet='protein'):
@@ -121,3 +122,11 @@ def return_scores(test_df,model,filepath,region = 'CDRS_withgaps', model_type = 
     elif model_type =='rnn':
         final_scores = test_rnn(model, test_loader)
     return final_scores
+# def return_scores_sav(df, filepath,batch_size = 1024,cdrs = 'CDRS_nogaps_full'):
+#     m = pickle.load(open(filepath,'rb'))
+#     df['logistic_regression_3mer_CDRS_full'] = np.zeros(len(df))
+#     for batch_tick in np.append(np.arange(batch_size,len(y_s),batch_size),len(y_s)):
+#         X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'].iloc[batch_tick-batch_size:batch_tick],k=3)
+#         y_score = m.decision_function(X_test)
+#         df['logistic_regression_3mer_CDRS_full'].iloc[batch_tick-batch_size:batch_tick] = y_score
+
