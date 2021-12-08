@@ -1,0 +1,11 @@
+
+run ANARCI
+done running ANARCI
+extract CDRS
+done extracting CDRS
+opening pickl
+done opening pickl, making cdr_seqs to onehot
+done converting cdrseqs to onehot, starting scoring 
+done scoring
+writing scores to file
+done writing scores to file
