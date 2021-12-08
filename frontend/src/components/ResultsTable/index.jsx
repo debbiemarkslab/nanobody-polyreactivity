@@ -4,7 +4,7 @@ import Table from 'react-bootstrap/Table';
 export default function ResultsTable(props) {
   const resultsCSVStr = props.resultsCSVStr;
   const [results, setResults] = useState([]);
-  const headers = ['Id', 'CDR1_nogaps', 'CDR2_nogaps', 'CDR3_nogaps', 'CDRS_IP', 'CDRS_HP', 'logistic_regression_onehot_CDRS', 'logistic_regression_3mer_CDRS'];
+  const headers = ['Id', 'CDR1_nogaps', 'CDR2_nogaps', 'CDR3_nogaps', 'CDRS_IP', 'CDRS_HP', 'logistic_regression_onehot_CDRS', 'logistic_regression_3mer_CDRS','cnn_20','rnn_20','rnn_20_full','cnn_full_10','logistic_regression_onehot_CDRS_full','logistic_regression_3mer_CDRS_full'];
 
   useEffect(() => {
     const fetchResultsData = () => {
