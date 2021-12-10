@@ -16,13 +16,23 @@ export default function ResultsTable(props) {
       const allHeaders = resultsCSVArr[rowIndex].split(',');
       rowIndex++;
 
+      var rowsToDisplay = 20;
+      if (resultsCSVArr.length < rowsToDisplay) {
+        rowsToDisplay = resultsCSVArr.length;
+      }
       var resultsArr = [];
-      for (rowIndex; rowIndex < resultsCSVArr.length; rowIndex++) {
+      for (rowIndex; rowIndex < rowsToDisplay; rowIndex++) {
         let row = resultsCSVArr[rowIndex].split(',');
         var rowDict = {};
         for (let colIndex = 0; colIndex < allHeaders.length; colIndex++) {
           if (headers.indexOf(allHeaders[colIndex]) >= 0) {
-            rowDict[allHeaders[colIndex]] = row[colIndex];
+            // Round to 2 decimal places
+            var valueToDisplay = row[colIndex];
+            if (!isNaN(parseFloat(row[colIndex]))) {
+              valueToDisplay = parseFloat(row[colIndex]);
+              valueToDisplay = +valueToDisplay.toFixed(2);
+            }
+            rowDict[allHeaders[colIndex]] = valueToDisplay;
           }
         }
         resultsArr.push(rowDict);

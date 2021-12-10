@@ -41,9 +41,14 @@ export default function HomePage() {
       }
     })
     .then((results) => {
+      if (!results || !('identifier' in results)) {
+        return;
+      }
       return results['identifier'];
     });
-    setResultsId(fetchedResultsId);
+    if (fetchedResultsId) {
+      setResultsId(fetchedResultsId);
+    }
   }
 
   const selectFileButtonOnClick = async (event) => {
