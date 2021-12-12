@@ -203,6 +203,13 @@ def read_fa(fa_file):
     return seqs
 
 def remove_invalid_sequences(filepath):
+    '''
+    function: remove sequences that have invalid characters i.e. not in ACDEFGHIKLMNPQRSTVWY-
+    input: 
+    filepath: fasta filepath
+    output:
+    if there are invalid chars then it overwrites the original fasta file
+    '''
     df_nonsticky = read_fa(filepath)
     if df_nonsticky.seq.str.contains(r'[^ACDEFGHIKLMNPQRSTVWY-]').any():
         df_filtered = df_nonsticky[~df_nonsticky.seq.str.contains(r'[^ACDEFGHIKLMNPQRSTVWY-]')]
@@ -210,7 +217,7 @@ def remove_invalid_sequences(filepath):
             for tick, row in df_filtered.iterrows():
                 f.write(f'>{row.header}\n')
                 f.write(f'{row.seq}\n')
-        print(f'removed sequences {df_nonsticky.loc[df_nonsticky.seq.str.contains(r"[^ACDEFGHIKLMNPQRSTVWY-]"),'seqs'].tolist()}',flush = True)
+        print(f'removed sequences {df_nonsticky.loc[df_nonsticky.seq.str.contains(r"[^ACDEFGHIKLMNPQRSTVWY-]"),"seqs"].tolist()}',flush = True)
     
     
 
