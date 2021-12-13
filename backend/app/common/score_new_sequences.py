@@ -5,6 +5,18 @@ import numpy as np
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import re
 from pathlib import Path
+from torch.utils.data import Dataset
+from app.common.double_mutant_generation import generate_doubles
+from app.common.models import CNN, RNN
+import torch
+from app.common.utils import test_cnn,test_rnn, NonAlignedOneHotArrayDataset,OneHotArrayDataset,return_scores
+import warnings
+import time
+warnings.filterwarnings("ignore")
+'''
+script intakes a one sequence csv created by ANARCI/IMGT and outputs all possible double mutants
+'''
+aa_list = np.asarray(list('ACDEFGHIKLMNPQRSTVWY-'))
 
 def example_function(seq):
     return f'The sequence is: {seq}'
@@ -102,13 +114,14 @@ def withgap_CDR3(seq):
         else:
             gap_seq = nogap_seq[:len(nogap_seq)//2+1]+'-'*(22-len(nogap_seq))+nogap_seq[-(len(nogap_seq)//2):]
     else:
-        gap_seq = seq.str[:11]+seq.str[-11:]
+        gap_seq = seq[:11] + seq[-11:]
     return gap_seq
 
 kd = { 'A': 1.8,'R':-4.5,'N':-3.5,'D':-3.5,'C': 2.5,
        'Q':-3.5,'E':-3.5,'G':-0.4,'H':-3.2,'I': 4.5,
        'L': 3.8,'K':-3.9,'M': 1.9,'F': 2.8,'P':-1.6,
        'S':-0.8,'T':-0.7,'W':-0.9,'Y':-1.3,'V': 4.2 }
+
 def hp_index(seq,kd=kd):
     hp_ix = 0
     for a in seq:
@@ -126,18 +139,29 @@ def find_glyc(seq):
 
 def extract_cdrs(file):
     df = pd.read_csv(file)
-    df['CDR1_nogaps'] = df.loc[:,'27':'38'].fillna('-').apply(lambda x: ''.join(x).replace('-',''), axis=1)
-    df['CDR2_nogaps'] = df.loc[:,'55':'65'].fillna('-').apply(lambda x: ''.join(x).replace('-',''), axis=1)
-    df['CDR3_nogaps'] = df.loc[:,'105':'117'].fillna('-').apply(lambda x: ''.join(x).replace('-',''), axis=1)
     df['CDR1_withgaps'] = df.loc[:,'27':'38'].fillna('-').apply(lambda x: ''.join(x), axis=1)
     df['CDR2_withgaps'] = df.loc[:,'55':'65'].fillna('-').apply(lambda x: ''.join(x), axis=1)
+    df['CDR2_withgaps_full'] = df.loc[:,'55':'66'].fillna('-').apply(lambda x: ''.join(x), axis=1)
     df['CDR3_withgaps'] = df.loc[:,'105':'117'].fillna('-').apply(lambda x: ''.join(x), axis=1)
-    df['CDRS_nogaps'] = df['CDR1_nogaps'] + df['CDR2_nogaps'] + df['CDR3_nogaps']
+
     df['CDRS_withgaps'] = df['CDR1_withgaps'] + df['CDR2_withgaps'] + df['CDR3_withgaps']
     df['CDR1_withgaps'] = df['CDR1_withgaps'].str[:4]+df['CDR1_withgaps'].str[-4:]
     df['CDR2_withgaps'] = df['CDR2_withgaps'].str[:5]+df['CDR2_withgaps'].str[-4:]
+    df['CDR2_withgaps_full'] = df['CDR2_withgaps'].str[:5]+df['CDR2_withgaps'].str[-5:]
     df['CDR3_withgaps'] = df['CDR3_withgaps'].apply(withgap_CDR3)
+
+    df['CDR1_nogaps'] = df['CDR1_withgaps'].str.replace('-','')
+    df['CDR2_nogaps'] = df['CDR2_withgaps'].str.replace('-','')
+    df['CDR3_nogaps'] = df['CDR3_withgaps'].str.replace('-','')
+    df['CDR2_nogaps_full'] = df['CDR2_withgaps_full'].str.replace('-','')
+
+    df['CDRS_nogaps'] = df['CDR1_nogaps'] + df['CDR2_nogaps'] + df['CDR3_nogaps']
+    df['CDRS_nogaps_full'] = df['CDR1_nogaps'] + df['CDR2_nogaps_full'] + df['CDR3_nogaps']
     df['CDRS_withgaps'] = df['CDR1_withgaps'] + df['CDR2_withgaps'] + df['CDR3_withgaps']
+    df['CDRS_withgaps_full'] = df['CDR1_withgaps'] + df['CDR2_withgaps_full'] + df['CDR3_withgaps']
+    return df
+
+def get_summary_statistics(df):
     df['CDRS_IP'] = df['CDRS_nogaps'].apply(lambda x: ProteinAnalysis(x).isoelectric_point())
     df['CDRS_HP'] = df['CDRS_nogaps'].apply(hp_index)
     df['CDR1_length'] = df['CDR1_nogaps'].str.len()
@@ -148,28 +172,145 @@ def extract_cdrs(file):
     df['CDR3_glycosylation'] = df['CDR3_nogaps'].apply(lambda x: find_glyc(x))
     return df
 
+# class Fasta:
+#     def __init__(self, fasta_filename):
+
+
+#     def clean_invalid():
+
+#     def save():
+
+
+# sequence = Fasta(fasta_filename)
+def read_fa(fa_file):
+    '''reads fasta file into header/sequence pairs'''
+    header = ''
+    seq = ''
+    seqs = []
+    with open(fa_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if len(line) == 0 or line[0] == '#':
+                continue
+            if line[0] == '>':
+                seqs.append((header, seq))
+                header = line[1:]
+                seq = ''
+            else:
+                seq += line
+    seqs.append((header, seq))
+    seqs = pd.DataFrame(seqs[1:], columns=['header', 'seq'])
+    return seqs
+
+def remove_invalid_sequences(filepath):
+    '''
+    function: remove sequences that have invalid characters i.e. not in ACDEFGHIKLMNPQRSTVWY-
+    input: 
+    filepath: fasta filepath
+    output:
+    if there are invalid chars then it overwrites the original fasta file
+    '''
+    df_nonsticky = read_fa(filepath)
+    if df_nonsticky.seq.str.contains(r'[^ACDEFGHIKLMNPQRSTVWY-]').any():
+        df_filtered = df_nonsticky[~df_nonsticky.seq.str.contains(r'[^ACDEFGHIKLMNPQRSTVWY-]')]
+        with open(filepath,'w+') as f:
+            for tick, row in df_filtered.iterrows():
+                f.write(f'>{row.header}\n')
+                f.write(f'{row.seq}\n')
+        print(f'removed sequences {df_nonsticky.loc[df_nonsticky.seq.str.contains(r"[^ACDEFGHIKLMNPQRSTVWY-]"),"seqs"].tolist()}',flush = True)
+    
+    
+
 async def score_sequences(
     sequences_filepath: str,
     identifier: str,
 ):
+    remove_invalid_sequences(sequences_filepath)
     results_dir = '/nanobody-polyreactivity/results'
     Path(results_dir).mkdir(parents=True, exist_ok=True)
-
-    subprocess.run(f'ANARCI -i {sequences_filepath} -o {results_dir}/{identifier} -s i --csv', shell=True, capture_output=True)
-
+    args = ['/opt/conda/bin/ANARCI', '-i', sequences_filepath, '-o', f'{results_dir}/{identifier}', '-s', 'i', '--csv']
+    print(f'Executing ANARCI task with args: {args}', flush=True)
+    process = subprocess.run(' '.join(args), executable = '/bin/bash', shell=True)
+    
+    # while not process.poll():
+    #     print('Waiting on ANARCI...', flush=True)
+    #     time.sleep(10)
+    print(f'ANARCI analysis finished. Return code: {process.returncode}', flush=True)
     df = extract_cdrs(f'{results_dir}/{identifier}_H.csv')
+    print('cdrs extracted', flush=True)
+    if len(df)==1:
+        df = generate_doubles(df)
 
+    df = get_summary_statistics(df)
+    # scoring sequences!
+
+    # log reg
     m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
     X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
     y_score = m.decision_function(X_test)
     y_pred = m.predict(X_test)
     df['logistic_regression_onehot_CDRS'] = y_score
+    batch_size = 1024
+    print('finished logreg onehot',flush = True)
 
+    # log reg with 3mers
     m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_3mer_CDRS.sav', 'rb'))
-    X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'],k=3)
-    y_score = m.decision_function(X_test)
-    y_pred = m.predict(X_test)
-    df['logistic_regression_3mer_CDRS'] = y_score
+    if len(df)<batch_size:
+        X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'])
+        y_score = m.decision_function(X_test)
+        df['logistic_regression_3mer_CDRS'] = y_score
+    else:
+        df['logistic_regression_3mer_CDRS'] = np.nan
+        for batch_tick in np.append(np.arange(batch_size,len(df),batch_size),len(df)):
+            X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'].iloc[batch_tick-batch_size:batch_tick],k=3)
+            y_score = m.decision_function(X_test)
+            df['logistic_regression_3mer_CDRS'].iloc[batch_tick-batch_size:batch_tick] = y_score
+    print('finished logreg 3mers',flush = True)
 
+    # CNN
+    model = CNN(input_size = 7)
+    filepath = '/nanobody-polyreactivity/app/models/cnn_20.tar'
+    df['cnn_20'] = return_scores(df,model,filepath)
+    print('finished cnn',flush = True)
+    # RNN
+    model = RNN(input_size = 20,
+                hidden_size = 128,
+                num_layers = 2,
+                num_classes = 1)
+    filepath = '/nanobody-polyreactivity/app/models/rnn_20.tar'
+    df['rnn_20'] = return_scores(df,model,filepath,region = 'CDRS_nogaps',model_type='rnn',max_len = 39)
+    print('finished rnn',flush = True)
+
+    # RNN full
+    filepath = '/nanobody-polyreactivity/app/models/rnn_CDRS_full_dist0_20.tar'
+    df['rnn_20_full'] = return_scores(df,model,filepath,region = 'CDRS_nogaps_full',model_type='rnn',max_len = 40)
+    print('finished rnn full',flush = True)
+
+    # CNN full
+    model = CNN(input_size = 8)
+    filepath = '/nanobody-polyreactivity/app/models/cnn_CDRS_full_dist0_10.tar'
+    df['cnn_full_10'] = return_scores(df,model,filepath,region = 'CDRS_withgaps_full')
+    print('finished cnn full',flush = True)
+
+    # logreg 3mers full
+    m = pickle.load(open('/nanobody-polyreactivity/app/models/3mer_logistic_regression_CDRS_full_dist0.sav', 'rb'))
+    if len(df)<batch_size:
+        X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'])
+        y_score = m.decision_function(X_test)
+        df['logistic_regression_3mer_CDRS_full'] = y_score
+    else:
+        df['logistic_regression_3mer_CDRS_full'] = np.nan
+        for batch_tick in np.append(np.arange(batch_size,len(df),batch_size),len(df)):
+            X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'].iloc[batch_tick-batch_size:batch_tick],k=3)
+            y_score = m.decision_function(X_test)
+            df['logistic_regression_3mer_CDRS_full'].iloc[batch_tick-batch_size:batch_tick] = y_score
+    print('finished logreg 3mers full',flush = True)
+
+    # logreg full
+    m = pickle.load(open('/nanobody-polyreactivity/app/models/onehot_logistic_regression_CDRS_full_dist0.sav', 'rb'))
+    X_test = cdr_seqs_to_onehot(df['CDRS_withgaps_full'])
+    y_score = m.decision_function(X_test)
+    df['logistic_regression_onehot_CDRS_full'] = y_score
+    print('finished logreg onehot full',flush = True)
     results_filepath = f'{results_dir}/{identifier}_scores.csv'
     df.to_csv(results_filepath)
