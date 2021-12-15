@@ -27,13 +27,15 @@ export default function ResultsTable(props) {
         var rowDict = {};
         for (let colIndex = 0; colIndex < allHeaders.length; colIndex++) {
           if (headers.indexOf(allHeaders[colIndex]) >= 0) {
-                      // Round to 2 decimal places
-                      var valueToDisplay = row[colIndex];
-                      if (!isNaN(parseFloat(row[colIndex]))) {
-                        valueToDisplay = parseFloat(row[colIndex]);
-                        valueToDisplay = +valueToDisplay.toFixed(2);
-                      }
-                      rowDict[allHeaders[colIndex]] = valueToDisplay;
+
+            // Round to 2 decimal places
+            var valueToDisplay = row[colIndex];
+            if (!isNaN(parseFloat(row[colIndex]))) {
+              valueToDisplay = parseFloat(row[colIndex]);
+              valueToDisplay = +valueToDisplay.toFixed(2);
+            }
+            rowDict[allHeaders[colIndex]] = valueToDisplay;
+
           }
         }
         resultsArr.push(rowDict);
