@@ -12,7 +12,7 @@ import {
   scoreSequencesFileUrl,
 } from '../../routes';
 import {
-  validateFastas
+  fastaIsValid
 } from '../../utils'
 
 const useStyles = makeStyles({
@@ -32,9 +32,16 @@ export default function HomePage() {
   const [inputSequence, setInputSequence] = useState('');
   const [inputSequenceFile, setInputSequenceFile] = useState(null);
   const [resultsId, setResultsId] = useState('');
+  const [generateDoubleMutants, setGenerateDoubleMutants] = useState(false);
 
   const sendSequenceButtonOnClick = async () => {
-    const scoreSequenceURLWithQuery = scoreSequencesUrl + `?sequences=${JSON.stringify(inputSequence)}`;
+    if (!fastaIsValid(inputSequence)) {
+      alert('Please input a valid list of sequences. See the FAQ for help.');
+      return;
+    }
+    const scoreSequenceURLWithQuery = scoreSequencesUrl +
+      `?sequences=${JSON.stringify(inputSequence)}` +
+      `?doubles=${generateDoubleMutants}`;
     const fetchedResultsId = await fetch(scoreSequenceURLWithQuery)
     .then((response) => {
       if (response.ok) {
@@ -60,12 +67,17 @@ export default function HomePage() {
 
   const uploadFileButtonOnClick = async (event) => {
     if (!inputSequenceFile) {
-      alert('Please choose a file of sequences to score first.');
+      alert(
+        'Please choose a file of sequences to score first. ' +
+        'See the FAQ for help.'
+      );
       return;
     }
     const formData = new FormData();
     formData.append('sequences_file', inputSequenceFile);
-    const fetchedResultsId = await fetch(scoreSequencesFileUrl, {
+    const scoreSequencesFileUrlWithQuery = scoreSequencesFileUrl +
+      `?doubles=${generateDoubleMutants}`;
+    const fetchedResultsId = await fetch(scoreSequencesFileUrlWithQuery, {
       method: 'POST',
       body: formData,
     })
@@ -106,7 +118,7 @@ export default function HomePage() {
             className={classes.centered}
           >
             <TextField
-              error={inputSequence && !validateFastas(inputSequence)}
+              error={!!(inputSequence && !fastaIsValid(inputSequence))}
               id='standard-basic'
               label='Sequences'
               variant='standard'
@@ -114,7 +126,7 @@ export default function HomePage() {
               onChange={(e) => setInputSequence(e.target.value)}
               helperText={
                 inputSequence &&
-                !validateFastas(inputSequence) &&
+                !fastaIsValid(inputSequence) &&
                 'Invalid fasta format.'
               }
             />
@@ -140,7 +152,10 @@ export default function HomePage() {
         </Grid>
         <Grid item xs={0} sm={0} md={0} lg={1} xl={1}>
         </Grid>
-        <Grid item xs={12} sm={12} md={5} lg={4} xl={4} className={classes.centered}>
+        <Grid
+          item xs={12} sm={12} md={5} lg={4} xl={4}
+          className={classes.centered}
+        >
           <Grid container spacing={1} className={classes.centered}>
             <Grid item xs={12} sm={12} md={12} lg={12} xl={12}>
               <Box className={classes.inputSequenceTitleBox}>
@@ -149,7 +164,12 @@ export default function HomePage() {
             </Grid>
             <Grid item className={classes.centered}>
               <label htmlFor='contained-button-file'>
-                <Input id='contained-button-file' multiple type='file' onChange={selectFileButtonOnClick}/>
+                <Input
+                  id='contained-button-file'
+                  multiple
+                  type='file'
+                  onChange={selectFileButtonOnClick}
+                />
                 <Button variant='outlined' component='span'>
                   Choose File
                 </Button>
@@ -188,10 +208,27 @@ export default function HomePage() {
           </Grid>
         </Grid>
       </Grid>
-
-      <Box className={classes.centered}>
-        {
-          resultsId &&
+      <Box className={classes.centered} style={{paddingTop: '2em'}}>
+        <input
+          type="checkbox"
+          id={'checkbox-double-mutants'}
+          name={'Double Mutants Checkbox'}
+          value={'Calculate scores for double mutants'}
+          checked={generateDoubleMutants}
+          onChange={() => setGenerateDoubleMutants(!generateDoubleMutants)}
+        />
+        <label htmlFor={'checkbox-double-mutants'} style={{ paddingLeft: 10 }}>
+          {'Calculate scores for double mutants'}
+        </label>
+        <br/>
+        <p>
+          This will only be done if <u>exactly</u> one sequences is provided.
+          Otherwise, scores for each sequence will be calculated normally.
+        </p>
+      </Box>
+      {
+        resultsId &&
+        <Box className={classes.centered}>
           <Grid container spacing={2} style={{paddingTop: '3em'}}>
             <Grid item xs={12}>
               <p>
@@ -199,7 +236,6 @@ export default function HomePage() {
                 <br/>
                 Click on the link below or save this ID to view your results later.
               </p>
-
               <Button
                 variant='contained'
                 disableElevation
@@ -209,8 +245,8 @@ export default function HomePage() {
               </Button>
             </Grid>
           </Grid>
-        }
-      </Box>
+        </Box>
+      }
     </Container>
   );
 }

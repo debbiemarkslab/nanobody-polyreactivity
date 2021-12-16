@@ -1,9 +1,9 @@
-export const validateFastas = (fastas) => {
-    if (!fastas) {
+export const fastaIsValid = (sequencesFasta) => {
+    if (!sequencesFasta) {
         return false;
     }
-    fastas = fastas.trim();
-    var lines = fastas.split('\n');
+    sequencesFasta = sequencesFasta.trim();
+    var lines = sequencesFasta.split('\n');
 
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex+=2) {
       if (lines[lineIndex][0] !== '>') {
