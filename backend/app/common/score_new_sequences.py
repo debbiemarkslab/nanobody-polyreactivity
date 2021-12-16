@@ -249,7 +249,7 @@ async def score_sequences(
     X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
     y_score = m.decision_function(X_test)
     y_pred = m.predict(X_test)
-    df['logistic_regression_onehot_CDRS'] = y_score
+    df['origFACS lr onehot'] = y_score
     batch_size = 1024
     print('finished logreg onehot',flush = True)
 
@@ -258,38 +258,39 @@ async def score_sequences(
     if len(df)<batch_size:
         X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'])
         y_score = m.decision_function(X_test)
-        df['logistic_regression_3mer_CDRS'] = y_score
+        df['origFACS lr 3mers'] = y_score
     else:
-        df['logistic_regression_3mer_CDRS'] = np.nan
+        df['origFACS lr 3mers'] = np.nan
         for batch_tick in np.append(np.arange(batch_size,len(df),batch_size),len(df)):
             X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'].iloc[batch_tick-batch_size:batch_tick],k=3)
             y_score = m.decision_function(X_test)
-            df['logistic_regression_3mer_CDRS'].iloc[batch_tick-batch_size:batch_tick] = y_score
+            df['origFACS lr 3mers'].iloc[batch_tick-batch_size:batch_tick] = y_score
     print('finished logreg 3mers',flush = True)
 
-    # CNN
+    # CNN full 
     model = CNN(input_size = 7)
-    filepath = '/nanobody-polyreactivity/app/models/cnn_20.tar'
-    df['cnn_20'] = return_scores(df,model,filepath)
+    filepath = '/nanobody-polyreactivity/app/models/cnn_full_20.tar'
+    df['origFACS cnn onehot'] = return_scores(df,model,filepath)
     print('finished cnn',flush = True)
-    # RNN
+    
+    # RNN full
     model = RNN(input_size = 20,
                 hidden_size = 128,
                 num_layers = 2,
                 num_classes = 1)
-    filepath = '/nanobody-polyreactivity/app/models/rnn_20.tar'
-    df['rnn_20'] = return_scores(df,model,filepath,region = 'CDRS_nogaps',model_type='rnn',max_len = 39)
+    filepath = '/nanobody-polyreactivity/app/models/rnn_full_20.tar'
+    df['origFACS rnn onehot'] = return_scores(df,model,filepath,region = 'CDRS_nogaps',model_type='rnn',max_len = 39)
     print('finished rnn',flush = True)
 
-    # RNN full
+    # RNN full long
     filepath = '/nanobody-polyreactivity/app/models/rnn_CDRS_full_dist0_20.tar'
-    df['rnn_20_full'] = return_scores(df,model,filepath,region = 'CDRS_nogaps_full',model_type='rnn',max_len = 40)
+    df['deepFACS rnn onehot'] = return_scores(df,model,filepath,region = 'CDRS_nogaps_full',model_type='rnn',max_len = 40)
     print('finished rnn full',flush = True)
 
-    # CNN full
+    # CNN full long
     model = CNN(input_size = 8)
     filepath = '/nanobody-polyreactivity/app/models/cnn_CDRS_full_dist0_10.tar'
-    df['cnn_full_10'] = return_scores(df,model,filepath,region = 'CDRS_withgaps_full')
+    df['deepFACS cnn onehot'] = return_scores(df,model,filepath,region = 'CDRS_withgaps_full')
     print('finished cnn full',flush = True)
 
     # logreg 3mers full
@@ -297,20 +298,20 @@ async def score_sequences(
     if len(df)<batch_size:
         X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'])
         y_score = m.decision_function(X_test)
-        df['logistic_regression_3mer_CDRS_full'] = y_score
+        df['deepFACS lr 3mer'] = y_score
     else:
-        df['logistic_regression_3mer_CDRS_full'] = np.nan
+        df['deepFACS lr 3mer'] = np.nan
         for batch_tick in np.append(np.arange(batch_size,len(df),batch_size),len(df)):
             X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'].iloc[batch_tick-batch_size:batch_tick],k=3)
             y_score = m.decision_function(X_test)
-            df['logistic_regression_3mer_CDRS_full'].iloc[batch_tick-batch_size:batch_tick] = y_score
+            df['deepFACS lr 3mer'].iloc[batch_tick-batch_size:batch_tick] = y_score
     print('finished logreg 3mers full',flush = True)
 
     # logreg full
     m = pickle.load(open('/nanobody-polyreactivity/app/models/onehot_logistic_regression_CDRS_full_dist0.sav', 'rb'))
     X_test = cdr_seqs_to_onehot(df['CDRS_withgaps_full'])
     y_score = m.decision_function(X_test)
-    df['logistic_regression_onehot_CDRS_full'] = y_score
+    df['deepFACS lr onehot'] = y_score
     print('finished logreg onehot full',flush = True)
     results_filepath = f'{results_dir}/{identifier}_scores.csv'
     df.to_csv(results_filepath)
