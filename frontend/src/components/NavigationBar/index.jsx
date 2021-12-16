@@ -23,6 +23,7 @@ export default function NavigationBar() {
           <Nav className='me-auto'>
             <Nav.Link as={Link} exact='true' to='/'>Home</Nav.Link>
             <Nav.Link as={Link} exact='true' to='/results'>Results</Nav.Link>
+            <Nav.Link as={Link} exact='true' to='/faq'>FAQ</Nav.Link>
           </Nav>
         </Navbar.Collapse>
       </Container>

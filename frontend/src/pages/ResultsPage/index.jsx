@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
@@ -10,21 +11,28 @@ import { makeStyles } from '@mui/styles';
 
 import { scoresUrl } from '../../routes';
 import ResultsTable from '../../components/ResultsTable';
+import vsLowThroughput from './allmodels_vs_lowthroughput.png';
+import vsHighThroughput from './allmodels_vs_highthroughput.png';
 
 const useStyles = makeStyles({
   heading: {
-    paddingTop: '30px'
+    paddingTop: '30px',
   },
   container: {
-    maxWidth: '90%'
+    maxWidth: '100%',
   },
   centered: {
-    justifyContent: 'center'
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   downloadButton: {
     textAlign: 'center',
     justifyContent: 'center',
     paddingTop: '2em',
+  },
+  img: {
+    maxWidth: '100%',
+    maxHeight: '100%',
   },
   table: {
     justifyContent: 'center',
@@ -36,15 +44,19 @@ export default function ResultsPage() {
   const classes = useStyles();
   const navigate = useNavigate();
   const { resultsId } = useParams();
-  const [resultsIdValid, setResultsIdValid] = useState(false);
+  const [resultsIdValid, setResultsIdValid] = useState(true);
   const [resultsIdInput, setResultsIdInput] = useState('');
   const [resultsStr, setResultsStr] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const getScoresForId = async () => {
-      setResultsIdValid(false);
+      setLoading(true);
+      setResultsIdValid(true);
       if (!resultsId) {
+        setResultsIdValid(false);
+        setLoading(false);
         return;
       }
       const scoreSequenceURLWithQuery = scoresUrl(resultsId);
@@ -57,19 +69,26 @@ export default function ResultsPage() {
         }
       });
       if (!fetchedResultBlob) {
+        setLoading(false);
         return;
       }
       const url = window.URL.createObjectURL(fetchedResultBlob);
       setDownloadUrl(url);
       const resultText = await fetchedResultBlob.text();
-      setResultsIdValid(true);
       setResultsStr(`${resultText}`);
+      setLoading(false);
     }
     getScoresForId();
   }, [resultsId]);
 
   const showResults = () => {
     return (
+      loading ?
+      <Grid container style={{paddingTop: '2em'}} className={classes.centered}>
+        <Grid item>
+          <CircularProgress/>
+        </Grid>
+      </Grid> :
       <Grid container style={{paddingTop: '2em'}}>
         <Grid item className={classes.table} xs={12}>
           <ResultsTable resultsCSVStr={resultsStr}/>
@@ -78,7 +97,7 @@ export default function ResultsPage() {
           {
             downloadUrl &&
             <Button
-              variant="outlined"
+              variant="contained"
               href={downloadUrl}
               download={`${resultsId}.csv`}
             >
@@ -105,7 +124,7 @@ export default function ResultsPage() {
         >
           <TextField
             id='standard-basic'
-            label='Results ID'
+            label={'Input Results ID'}
             variant='standard'
             multiline
             onChange={(e) => setResultsIdInput(e.target.value)}
@@ -135,12 +154,19 @@ export default function ResultsPage() {
 
   return (
     <Container className={classes.container}>
-      <Grid container style={{paddingTop: '2em'}}>
+      <Grid container style={{paddingTop: '2em', paddingBottom: '2em'}}>
         <Grid item xs={12} sm={12} md={5} lg={4} xl={4}>
           <Box className={classes.heading}>
             <h2>Results</h2>
+            <p>You can scroll down view figures to help contextualize your data.</p>
           </Box>
         </Grid>
+        {
+          resultsId &&
+          <Grid item xs={12} sm={12} md={12} lg={12} xl={12}>
+            <span><b>Results ID:</b> {resultsId}</span>
+          </Grid>
+        }
         {
           showResultsSearchBar()
         }
@@ -148,6 +174,20 @@ export default function ResultsPage() {
           resultsIdValid &&
           showResults()
         }
+        <Grid item xs={12} sm={12} md={12} lg={12} xl={12} className={classes.centered}>
+          <img
+            src={vsHighThroughput}
+            alt='Example histograms of all models vs high throughput.'
+            className={classes.img}
+          />
+        </Grid>
+        <Grid item xs={12} sm={12} md={12} lg={12} xl={12} className={classes.centered}>
+          <img
+            src={vsLowThroughput}
+            alt='Example histograms of all models vs low throughput.'
+            className={classes.img}
+          />
+        </Grid>
       </Grid>
     </Container>
   );

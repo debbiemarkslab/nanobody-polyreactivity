@@ -57,7 +57,7 @@ def between_CDRS(input_seq, double_mutants_dict, seq, i, a, CDR1: str, CDR2: str
     OUTPUTS:
     double_mutants_dict: dictionary of all mutants including the double mutants generated in function
     '''
-    if CDR2=='CDR2': 
+    if CDR2=='CDR2':
         seq2 = input_seq[f'{CDR2}_withgaps_full']
     else:
         seq2 = input_seq[f'{CDR2}_withgaps']
@@ -80,8 +80,8 @@ def between_CDRS(input_seq, double_mutants_dict, seq, i, a, CDR1: str, CDR2: str
             else:
                 mut_cdrs = input_seq['CDR1_withgaps'] + mut_seq + mut_seq2
                 key = input_seq['Id']+f'_CDR2_{seq[i]}{i+1}{a}_CDR3_{seq2[j]}{j+1}{b}'
-                double_mutants_dict[key] = [input_seq['CDR1_withgaps'],mut_seq,mut_seq2,mut_cdrs]  
-                
+                double_mutants_dict[key] = [input_seq['CDR1_withgaps'],mut_seq,mut_seq2,mut_cdrs]
+
     return double_mutants_dict
 
 def generate_doubles(input_seq_df):
@@ -95,7 +95,6 @@ def generate_doubles(input_seq_df):
     key = input_seq['Id']+'_WT'
     double_mutants_dict[key] = [input_seq['CDR1_withgaps'],input_seq['CDR2_withgaps_full'],input_seq['CDR3_withgaps'],input_seq['CDRS_withgaps_full']]
 
-    print('generating mutations in CDR1!')
     seq = input_seq['CDR1_withgaps']
     for i in range(len(seq)): # iterating through the length of the CDR1 sequence
         for a in aa_list[aa_list != seq[i]]: # iterating through aa list, excluding the aa at that pos already
@@ -107,18 +106,16 @@ def generate_doubles(input_seq_df):
             # putting single mutants in key
             key = input_seq['Id']+f'_CDR1_{seq[i]}{i+1}{a}'
             double_mutants_dict[key] = [mut_seq,input_seq['CDR2_withgaps_full'],input_seq['CDR3_withgaps'],mut_cdrs]
-            
+
             # generating mutants within CDR1
             double_mutants_dict = within_CDR(input_seq, double_mutants_dict, seq,i,a,'CDR1')
 
             # generating mutants between CDR1 and CDR2
             double_mutants_dict = between_CDRS(input_seq, double_mutants_dict, seq, i, a, 'CDR1', 'CDR2')
-            
+
             # generating mutants between CDR1 and CDR3
             double_mutants_dict = between_CDRS(input_seq, double_mutants_dict, seq, i, a, 'CDR1', 'CDR3')
-    print('done generating mutations in CDR1!')
-    print('generating mutations in CDR2!')
-    seq = input_seq['CDR2_withgaps_full'] 
+    seq = input_seq['CDR2_withgaps_full']
     for i in range(len(seq)): # iterating through entire length of CDR2
         for a in aa_list[aa_list != seq[i]]:
             mut_seq = list(seq)
@@ -129,14 +126,12 @@ def generate_doubles(input_seq_df):
             # generate single mutants
             key = input_seq['Id']+f'_CDR2_{seq[i]}{i+1}{a}'
             double_mutants_dict[key] = [input_seq['CDR1_withgaps'],mut_seq,input_seq['CDR3_withgaps'],mut_cdrs]
-            
+
             #generate mutants within CDR2
             double_mutants_dict = within_CDR(input_seq, double_mutants_dict, seq, i, a,'CDR2')
 
             # generating mutants between CDR2 and CDR3
             double_mutants_dict = between_CDRS(input_seq, double_mutants_dict, seq, i, a, 'CDR2', 'CDR3')
-    print('done generating mutations in CDR2!')  
-    print('generating mutations in CDR3')  
     seq = input_seq['CDR3_withgaps']
     for i in range(len(seq)): # iterating through entire length of CDR3
         for a in aa_list[aa_list != seq[i]]:
@@ -149,24 +144,21 @@ def generate_doubles(input_seq_df):
 
             # generating mutants within CDR3
             double_mutants_dict = within_CDR(input_seq, double_mutants_dict, seq, i, a,'CDR3')
-    print('done generating mutations in CDR3')  
     df_double_muts = pd.DataFrame.from_dict(double_mutants_dict,orient='index',columns=['CDR1_withgaps', 'CDR2_withgaps_full', 'CDR3_withgaps','CDRS_withgaps_full'])
     df_double_muts['CDR2_withgaps'] = df_double_muts['CDR2_withgaps_full'].apply(lambda x: x[:-1])
     df_double_muts['CDR2_nogaps_full'] = df_double_muts['CDR2_withgaps_full'].str.replace('-','')
     df_double_muts['CDRS_withgaps'] = df_double_muts.loc[:,['CDR1_withgaps','CDR2_withgaps','CDR3_withgaps']].astype(str).sum(axis = 1)
-    print( df_double_muts['CDR2_withgaps'].apply(len).value_counts())
     df_double_muts['CDRS_withgaps_full'] = df_double_muts.loc[:,['CDR1_withgaps','CDR2_withgaps_full','CDR3_withgaps']].astype(str).sum(axis = 1)
 
     for i in [1,2,3]:
         df_double_muts[f'CDR{i}_nogaps'] = df_double_muts[f'CDR{i}_withgaps'].str.replace('-','')
     df_double_muts['CDRS_nogaps'] = df_double_muts['CDRS_withgaps'].str.replace('-','')
     df_double_muts['CDRS_nogaps_full'] = df_double_muts['CDRS_withgaps_full'].str.replace('-','')
-    
+
     df_double_muts['Id'] = df_double_muts.index.astype(str)
     df_double_muts['WT_Id'] = df_double_muts['Id'].str.split('_').str[0]
-    
 
-    print('starting to label mutations')  
+
     # labeling if insertion, deletion or missense
     df_double_muts.loc[df_double_muts.Id.str.contains(r'[^(CDR)]+CDR\d_-\d+\w$'),'mut1_type'] = 'insertion'
     df_double_muts.loc[df_double_muts.Id.str.contains(r'[^(CDR)]+CDR\d_\w\d+-$'),'mut1_type'] = 'deletion'
@@ -185,9 +177,7 @@ def generate_doubles(input_seq_df):
     df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_\w\d+\w'),'mut2_type'] = 'missense'
     df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'mut2_loc'] = df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'Id'].str.findall(r'CDR\d_.\d+._CDR\d_.(\d+).').apply(lambda x: x[0])
     df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'mut2'] = df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'Id'].str.findall(r'CDR\d_.\d+._CDR\d_.\d+(.)').apply(lambda x: x[0])
-    print('done labeling mutations')
 
     seqs_to_drop = (df_double_muts['CDR3_withgaps'].str.contains(r'-[^-]-') | df_double_muts['CDR3_withgaps'].str.contains(r'-[^-][^-]-'))
-    print(sum(seqs_to_drop))
     df_double_muts = df_double_muts[~seqs_to_drop]
     return df_double_muts

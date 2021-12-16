@@ -12,7 +12,9 @@ import torch
 from app.common.utils import test_cnn,test_rnn, NonAlignedOneHotArrayDataset,OneHotArrayDataset,return_scores
 import warnings
 import time
+
 warnings.filterwarnings("ignore")
+
 '''
 script intakes a one sequence csv created by ANARCI/IMGT and outputs all possible double mutants
 '''
@@ -172,16 +174,6 @@ def get_summary_statistics(df):
     df['CDR3_glycosylation'] = df['CDR3_nogaps'].apply(lambda x: find_glyc(x))
     return df
 
-# class Fasta:
-#     def __init__(self, fasta_filename):
-
-
-#     def clean_invalid():
-
-#     def save():
-
-
-# sequence = Fasta(fasta_filename)
 def read_fa(fa_file):
     '''reads fasta file into header/sequence pairs'''
     header = ''
@@ -205,7 +197,7 @@ def read_fa(fa_file):
 def remove_invalid_sequences(filepath):
     '''
     function: remove sequences that have invalid characters i.e. not in ACDEFGHIKLMNPQRSTVWY-
-    input: 
+    input:
     filepath: fasta filepath
     output:
     if there are invalid chars then it overwrites the original fasta file
@@ -217,9 +209,8 @@ def remove_invalid_sequences(filepath):
             for tick, row in df_filtered.iterrows():
                 f.write(f'>{row.header}\n')
                 f.write(f'{row.seq}\n')
-        print(f'removed sequences {df_nonsticky.loc[df_nonsticky.seq.str.contains(r"[^ACDEFGHIKLMNPQRSTVWY-]"),"seqs"].tolist()}',flush = True)
-    
-    
+
+
 
 async def score_sequences(
     sequences_filepath: str,
@@ -229,20 +220,13 @@ async def score_sequences(
     results_dir = '/nanobody-polyreactivity/results'
     Path(results_dir).mkdir(parents=True, exist_ok=True)
     args = ['/opt/conda/bin/ANARCI', '-i', sequences_filepath, '-o', f'{results_dir}/{identifier}', '-s', 'i', '--csv']
-    print(f'Executing ANARCI task with args: {args}', flush=True)
     process = subprocess.run(' '.join(args), executable = '/bin/bash', shell=True)
-    
-    # while not process.poll():
-    #     print('Waiting on ANARCI...', flush=True)
-    #     time.sleep(10)
-    print(f'ANARCI analysis finished. Return code: {process.returncode}', flush=True)
+
     df = extract_cdrs(f'{results_dir}/{identifier}_H.csv')
-    print('cdrs extracted', flush=True)
     if len(df)==1:
         df = generate_doubles(df)
 
     df = get_summary_statistics(df)
-    # scoring sequences!
 
     # log reg
     m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
@@ -251,7 +235,6 @@ async def score_sequences(
     y_pred = m.predict(X_test)
     df['origFACS lr onehot'] = y_score
     batch_size = 1024
-    print('finished logreg onehot',flush = True)
 
     # log reg with 3mers
     m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_3mer_CDRS.sav', 'rb'))
@@ -265,33 +248,28 @@ async def score_sequences(
             X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'].iloc[batch_tick-batch_size:batch_tick],k=3)
             y_score = m.decision_function(X_test)
             df['origFACS lr 3mers'].iloc[batch_tick-batch_size:batch_tick] = y_score
-    print('finished logreg 3mers',flush = True)
 
-    # CNN full 
+    # CNN full
     model = CNN(input_size = 7)
     filepath = '/nanobody-polyreactivity/app/models/cnn_full_20.tar'
     df['origFACS cnn onehot'] = return_scores(df,model,filepath)
-    print('finished cnn',flush = True)
-    
+
     # RNN full
     model = RNN(input_size = 20,
                 hidden_size = 128,
                 num_layers = 2,
                 num_classes = 1)
     filepath = '/nanobody-polyreactivity/app/models/rnn_full_20.tar'
-    df['origFACS rnn onehot'] = return_scores(df,model,filepath,region = 'CDRS_nogaps',model_type='rnn',max_len = 39)
-    print('finished rnn',flush = True)
+    df['origFACS rnn onehot'] = return_scores(df, model, filepath, region='CDRS_nogaps', model_type='rnn', max_len=39)
 
     # RNN full long
     filepath = '/nanobody-polyreactivity/app/models/rnn_CDRS_full_dist0_20.tar'
-    df['deepFACS rnn onehot'] = return_scores(df,model,filepath,region = 'CDRS_nogaps_full',model_type='rnn',max_len = 40)
-    print('finished rnn full',flush = True)
+    df['deepFACS rnn onehot'] = return_scores(df, model, filepath, region='CDRS_nogaps_full', model_type='rnn', max_len=40)
 
     # CNN full long
     model = CNN(input_size = 8)
     filepath = '/nanobody-polyreactivity/app/models/cnn_CDRS_full_dist0_10.tar'
-    df['deepFACS cnn onehot'] = return_scores(df,model,filepath,region = 'CDRS_withgaps_full')
-    print('finished cnn full',flush = True)
+    df['deepFACS cnn onehot'] = return_scores(df, model, filepath, region='CDRS_withgaps_full')
 
     # logreg 3mers full
     m = pickle.load(open('/nanobody-polyreactivity/app/models/3mer_logistic_regression_CDRS_full_dist0.sav', 'rb'))
@@ -305,13 +283,11 @@ async def score_sequences(
             X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'].iloc[batch_tick-batch_size:batch_tick],k=3)
             y_score = m.decision_function(X_test)
             df['deepFACS lr 3mer'].iloc[batch_tick-batch_size:batch_tick] = y_score
-    print('finished logreg 3mers full',flush = True)
 
     # logreg full
     m = pickle.load(open('/nanobody-polyreactivity/app/models/onehot_logistic_regression_CDRS_full_dist0.sav', 'rb'))
     X_test = cdr_seqs_to_onehot(df['CDRS_withgaps_full'])
     y_score = m.decision_function(X_test)
     df['deepFACS lr onehot'] = y_score
-    print('finished logreg onehot full',flush = True)
     results_filepath = f'{results_dir}/{identifier}_scores.csv'
     df.to_csv(results_filepath)
