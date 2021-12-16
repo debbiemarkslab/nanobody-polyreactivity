@@ -11,6 +11,9 @@ import {
   scoreSequencesUrl,
   scoreSequencesFileUrl,
 } from '../../routes';
+import {
+  validateFastas
+} from '../../utils'
 
 const useStyles = makeStyles({
   inputSequenceTitleBox: {
@@ -103,11 +106,17 @@ export default function HomePage() {
             className={classes.centered}
           >
             <TextField
+              error={inputSequence && !validateFastas(inputSequence)}
               id='standard-basic'
               label='Sequences'
               variant='standard'
               multiline
               onChange={(e) => setInputSequence(e.target.value)}
+              helperText={
+                inputSequence &&
+                !validateFastas(inputSequence) &&
+                'Invalid fasta format.'
+              }
             />
             {
               inputSequence

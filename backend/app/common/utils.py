@@ -13,12 +13,14 @@ class SequencesToOneHot():
         self.aa_dict = {}
         for i,aa in enumerate(self.aa_list):
             self.aa_dict[aa] = i
+
     def one_hot_3D(self, s):
         x = np.zeros((len(s), len(self.aa_list)))
         for i, letter in enumerate(s):
             if letter in self.aa_dict:
                 x[i , self.aa_dict[letter]] = 1
         return x
+
     def cdr_seqs_to_arr(self, df_annot, cdr='CDRS_withgaps'):
         onehot_array = np.empty((len(df_annot[cdr]),len(df_annot.iloc[0].loc[cdr]),20))
         for s, seq in enumerate(df_annot[cdr].values):
@@ -38,12 +40,14 @@ class SequencesToOneHot_nonaligned():
         for i,aa in enumerate(self.aa_list):
             self.aa_dict[aa] = i
             self.max_len = max_len
+
     def one_hot_3D(self, s):
         x = np.zeros((len(s), len(self.aa_list)))
         for i, letter in enumerate(s):
             if letter in self.aa_dict:
                 x[i , self.aa_dict[letter]] = 1
         return x
+
     def cdr_seqs_to_arr(self, df_annot, cdr='CDRS_nogaps'):
         onehot_array = np.empty((len(df_annot[cdr]),self.max_len,20))
         for s, seq in enumerate(df_annot[cdr].values):
@@ -84,20 +88,23 @@ class NonAlignedOneHotArrayDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.samples[idx]
+
 def test_rnn(model, test_loader, epoch=1):
     scores = []
-    for seq_array, labels in test_loader: 
+    for seq_array, labels in test_loader:
         inputs = seq_array.float()
         labels = labels
         outputs = model(inputs)
         predicted = torch.zeros(outputs.shape[0],outputs.shape[1])
         outputs = outputs.squeeze().tolist()
+        if type(outputs) == float:
+            outputs = [outputs]
         scores.extend(outputs)
     return scores
 
 def test_cnn(model, test_loader):
     scores = []
-    for seq_array, labels in test_loader: 
+    for seq_array, labels in test_loader:
         inputs = torch.reshape(seq_array,(seq_array.shape[0],seq_array.shape[2],seq_array.shape[1])).float()
         labels = labels.reshape(-1,1)
         outputs = model(inputs)
@@ -112,8 +119,8 @@ def return_scores(test_df,model,filepath,region = 'CDRS_withgaps', model_type = 
         test_dataset = OneHotArrayDataset(test_df, region)
     elif model_type =='rnn':
         test_dataset = NonAlignedOneHotArrayDataset(test_df, region,max_len=max_len)
-    test_loader = torch.utils.data.DataLoader(dataset = test_dataset,  
-                                                  batch_size = 64,  
+    test_loader = torch.utils.data.DataLoader(dataset = test_dataset,
+                                                  batch_size = 64,
                                                   shuffle = False)
     model.load_state_dict(torch.load(filepath))
     model.eval()
@@ -122,6 +129,7 @@ def return_scores(test_df,model,filepath,region = 'CDRS_withgaps', model_type = 
     elif model_type =='rnn':
         final_scores = test_rnn(model, test_loader)
     return final_scores
+
 # def return_scores_sav(df, filepath,batch_size = 1024,cdrs = 'CDRS_nogaps_full'):
 #     m = pickle.load(open(filepath,'rb'))
 #     df['logistic_regression_3mer_CDRS_full'] = np.zeros(len(df))
@@ -129,4 +137,3 @@ def return_scores(test_df,model,filepath,region = 'CDRS_withgaps', model_type = 
 #         X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'].iloc[batch_tick-batch_size:batch_tick],k=3)
 #         y_score = m.decision_function(X_test)
 #         df['logistic_regression_3mer_CDRS_full'].iloc[batch_tick-batch_size:batch_tick] = y_score
-
