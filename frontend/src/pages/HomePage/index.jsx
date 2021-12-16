@@ -41,7 +41,7 @@ export default function HomePage() {
     }
     const scoreSequenceURLWithQuery = scoreSequencesUrl +
       `?sequences=${JSON.stringify(inputSequence)}` +
-      `?doubles=${generateDoubleMutants}`;
+      `&?doubles=${generateDoubleMutants}`;
     const fetchedResultsId = await fetch(scoreSequenceURLWithQuery)
     .then((response) => {
       if (response.ok) {

@@ -210,8 +210,6 @@ def remove_invalid_sequences(filepath):
                 f.write(f'>{row.header}\n')
                 f.write(f'{row.seq}\n')
 
-
-
 async def score_sequences(
     sequences_filepath: str,
     identifier: str,
@@ -220,6 +218,7 @@ async def score_sequences(
     remove_invalid_sequences(sequences_filepath)
     results_dir = '/nanobody-polyreactivity/results'
     Path(results_dir).mkdir(parents=True, exist_ok=True)
+
     args = ['/opt/conda/bin/ANARCI', '-i', sequences_filepath, '-o', f'{results_dir}/{identifier}', '-s', 'i', '--csv']
     process = subprocess.run(' '.join(args), executable = '/bin/bash', shell=True)
 
