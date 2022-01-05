@@ -41,7 +41,7 @@ export default function HomePage() {
     }
     const scoreSequenceURLWithQuery = scoreSequencesUrl +
       `?sequences=${JSON.stringify(inputSequence)}` +
-      `&?doubles=${generateDoubleMutants}`;
+      `&doubles=${generateDoubleMutants}`;
     const fetchedResultsId = await fetch(scoreSequenceURLWithQuery)
     .then((response) => {
       if (response.ok) {
@@ -76,7 +76,7 @@ export default function HomePage() {
     const formData = new FormData();
     formData.append('sequences_file', inputSequenceFile);
     const scoreSequencesFileUrlWithQuery = scoreSequencesFileUrl +
-      `?doubles=${generateDoubleMutants}`;
+      `&doubles=${generateDoubleMutants}`;
     const fetchedResultsId = await fetch(scoreSequencesFileUrlWithQuery, {
       method: 'POST',
       body: formData,
