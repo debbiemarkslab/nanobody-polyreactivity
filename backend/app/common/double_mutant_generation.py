@@ -108,13 +108,13 @@ def generate_doubles(input_seq_df):
             double_mutants_dict[key] = [mut_seq,input_seq['CDR2_withgaps_full'],input_seq['CDR3_withgaps'],mut_cdrs]
 
             # generating mutants within CDR1
-            double_mutants_dict = within_CDR(input_seq, double_mutants_dict, seq,i,a,'CDR1')
+            double_mutants_dict = within_CDR(input_seq, double_mutants_dict, mut_seq,i,a,'CDR1')
 
             # generating mutants between CDR1 and CDR2
-            double_mutants_dict = between_CDRS(input_seq, double_mutants_dict, seq, i, a, 'CDR1', 'CDR2')
+            double_mutants_dict = between_CDRS(input_seq, double_mutants_dict, mut_seq, i, a, 'CDR1', 'CDR2')
 
             # generating mutants between CDR1 and CDR3
-            double_mutants_dict = between_CDRS(input_seq, double_mutants_dict, seq, i, a, 'CDR1', 'CDR3')
+            double_mutants_dict = between_CDRS(input_seq, double_mutants_dict, mut_seq, i, a, 'CDR1', 'CDR3')
     seq = input_seq['CDR2_withgaps_full']
     for i in range(len(seq)): # iterating through entire length of CDR2
         for a in aa_list[aa_list != seq[i]]:
@@ -128,10 +128,10 @@ def generate_doubles(input_seq_df):
             double_mutants_dict[key] = [input_seq['CDR1_withgaps'],mut_seq,input_seq['CDR3_withgaps'],mut_cdrs]
 
             #generate mutants within CDR2
-            double_mutants_dict = within_CDR(input_seq, double_mutants_dict, seq, i, a,'CDR2')
+            double_mutants_dict = within_CDR(input_seq, double_mutants_dict, mut_seq, i, a,'CDR2')
 
             # generating mutants between CDR2 and CDR3
-            double_mutants_dict = between_CDRS(input_seq, double_mutants_dict, seq, i, a, 'CDR2', 'CDR3')
+            double_mutants_dict = between_CDRS(input_seq, double_mutants_dict, mut_seq, i, a, 'CDR2', 'CDR3')
     seq = input_seq['CDR3_withgaps']
     for i in range(len(seq)): # iterating through entire length of CDR3
         for a in aa_list[aa_list != seq[i]]:
@@ -143,7 +143,7 @@ def generate_doubles(input_seq_df):
             double_mutants_dict[key] = [input_seq['CDR1_withgaps'],input_seq['CDR2_withgaps_full'],mut_seq,mut_cdrs]
 
             # generating mutants within CDR3
-            double_mutants_dict = within_CDR(input_seq, double_mutants_dict, seq, i, a,'CDR3')
+            double_mutants_dict = within_CDR(input_seq, double_mutants_dict, mut_seq, i, a,'CDR3')
     df_double_muts = pd.DataFrame.from_dict(double_mutants_dict,orient='index',columns=['CDR1_withgaps', 'CDR2_withgaps_full', 'CDR3_withgaps','CDRS_withgaps_full'])
     df_double_muts['CDR2_withgaps'] = df_double_muts['CDR2_withgaps_full'].apply(lambda x: x[:-1])
     df_double_muts['CDR2_nogaps_full'] = df_double_muts['CDR2_withgaps_full'].str.replace('-','')
