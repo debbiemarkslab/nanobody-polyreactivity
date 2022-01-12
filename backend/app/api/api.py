@@ -39,13 +39,17 @@ async def score_sequences(
     identifier = str(uuid.uuid4())
     sequences_filepath = f'/nanobody-polyreactivity/inputs/{identifier}.fa'
     with open(sequences_filepath, 'w') as f:
-        for l in sequences[1:-1].split('\\n'):
+        for l in sequences.strip('"').split('\\n'):
             f.write(l+'\n')
-    asyncio.create_task(score_new_sequences.score_sequences(sequences_filepath, identifier))
+
+    asyncio.create_task(score_new_sequences.score_sequences(sequences_filepath, identifier, doubles))
     return {'identifier': identifier}
 
 @app.post('/score_sequences_file/')
-async def score_sequences_file(sequences_file: UploadFile = File(...)):
+async def score_sequences_file(
+    sequences_file: UploadFile = File(...),
+    doubles: bool = False,
+):
     inputs_dir = '/nanobody-polyreactivity/inputs'
     Path(inputs_dir).mkdir(parents=True, exist_ok=True)
 
@@ -56,5 +60,5 @@ async def score_sequences_file(sequences_file: UploadFile = File(...)):
         sequences = file_bytes.decode('utf-8')
         f.write(sequences)
 
-    asyncio.create_task(score_new_sequences.score_sequences(sequences_filepath, identifier))
+    asyncio.create_task(score_new_sequences.score_sequences(sequences_filepath, identifier, doubles))
     return {'identifier': identifier}

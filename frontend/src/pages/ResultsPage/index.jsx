@@ -115,7 +115,7 @@ export default function ResultsPage() {
       navigate(`/results/${resultsIdInput}`)
     };
     return (
-      <Grid container className={classes.centered}>
+      <Grid container className={classes.centered} style={{paddingTop: '2em'}}>
         <Box
           component='form'
           sx={{
@@ -155,17 +155,23 @@ export default function ResultsPage() {
 
   return (
     <Container className={classes.container}>
-      <Grid container style={{paddingTop: '2em', paddingBottom: '2em'}}>
+      <Grid container style={{paddingTop: '2em', paddingBottom: '4em'}}>
         <Grid item xs={12} sm={12} md={5} lg={4} xl={4}>
           <Box className={classes.heading}>
             <h2>Results</h2>
-            <p>You can scroll down view figures to help contextualize your data.</p>
           </Box>
         </Grid>
         {
           resultsId &&
           <Grid item xs={12} sm={12} md={12} lg={12} xl={12}>
             <span><b>Results ID:</b> {resultsId}</span>
+            <p>
+              <br/>
+              Scroll down view figures to help contextualize your data.
+              <br/>
+              If you requested scores for all double mutants of your nanobody,
+               this may take a few minutes!
+            </p>
           </Grid>
         }
         {
@@ -175,10 +181,26 @@ export default function ResultsPage() {
           resultsIdValid &&
           showResults()
         }
-        <Grid item xs={12} sm={12} md={12} lg={12} xl={12} className={classes.centered}>
+        <Grid item xs={12} sm={12} md={12} lg={12} xl={12}
+          className={classes.centered} style={{paddingTop: '4em'}}
+        >
           <img
+<<<<<<< HEAD
             src={expvsmodel}
             alt='model vs low and high throughput experiment'
+=======
+            src={vsHighThroughput}
+            alt='Example histograms of all models vs high throughput.'
+            className={classes.img}
+          />
+        </Grid>
+        <Grid item xs={12} sm={12} md={12} lg={12} xl={12}
+          className={classes.centered} style={{paddingTop: '4em'}}
+        >
+          <img
+            src={vsLowThroughput}
+            alt='Example histograms of all models vs low throughput.'
+>>>>>>> e870aa88adfca73353ff13a0f5b113fabb8984f8
             className={classes.img}
           />
         </Grid>

@@ -220,15 +220,17 @@ def rank_and_filter_columns(df):
 async def score_sequences(
     sequences_filepath: str,
     identifier: str,
+    doubles: bool,
 ):
     remove_invalid_sequences(sequences_filepath)
     results_dir = '/nanobody-polyreactivity/results'
     Path(results_dir).mkdir(parents=True, exist_ok=True)
+
     args = ['/opt/conda/bin/ANARCI', '-i', sequences_filepath, '-o', f'{results_dir}/{identifier}', '-s', 'i', '--csv']
     process = subprocess.run(' '.join(args), executable = '/bin/bash', shell=True)
 
     df = extract_cdrs(f'{results_dir}/{identifier}_H.csv')
-    if len(df)==1:
+    if doubles and len(df) == 1:
         df = generate_doubles(df)
 
     df = get_summary_statistics(df)
