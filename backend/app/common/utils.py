@@ -130,6 +130,28 @@ def return_scores(test_df,model,filepath,region = 'CDRS_withgaps', model_type = 
         final_scores = test_rnn(model, test_loader)
     return final_scores
 
+def fasta_is_valid(sequences_fasta):
+    valid_chars = {'A','C','D','E','F','G','H','I','K','L','M','N','P','Q','R','S','T','U','V','W','Y'}
+    if not sequences_fasta:
+        return False
+    sequences_fasta = sequences_fasta.strip()
+    lines = sequences_fasta.split('\n')
+
+    for i in range(0, len(lines), 2):
+        if lines[i][0] != '>':
+            return False
+        if i+1 > len(lines):
+            return False
+        sequence = lines[i+1].strip()
+        if not sequence:
+            return False
+        for c in sequence:
+            if c.upper() not in valid_chars:
+                return False
+    return True
+
+
+
 # def return_scores_sav(df, filepath,batch_size = 1024,cdrs = 'CDRS_nogaps_full'):
 #     m = pickle.load(open(filepath,'rb'))
 #     df['logistic_regression_3mer_CDRS_full'] = np.zeros(len(df))
