@@ -212,10 +212,10 @@ def remove_invalid_sequences(filepath):
 
 
 def rank_and_filter_columns(df):
-    df = df.drop(columns = ['exp_phenotype_binary'])
+    # df = df.drop(columns = ['exp_phenotype_binary'])
     df_wt = df.iloc[0]
-    df_ranked = df.iloc[1:].sort_values('deepFACS lr onehot')
-    return pd.concat([df_wt.to_frame().T,df_ranked]).iloc[:30]
+    df_ranked = df.iloc[1:].sort_values('origFACS lr onehot',ascending = False)
+    return pd.concat([df_wt.to_frame().T,df_ranked]).iloc[:31]
 
 async def score_sequences(
     sequences_filepath: str,
@@ -233,12 +233,12 @@ async def score_sequences(
 
     df = get_summary_statistics(df)
 
-    # # log reg
-    # m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
-    # X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
-    # y_score = m.decision_function(X_test)
-    # y_pred = m.predict(X_test)
-    # df['origFACS lr onehot'] = y_score
+    # log reg
+    m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
+    X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
+    y_score = m.decision_function(X_test)
+    y_pred = m.predict(X_test)
+    df['origFACS lr onehot'] = y_score
     # batch_size = 1024
 
     # # log reg with 3mers
@@ -290,10 +290,11 @@ async def score_sequences(
     #         df['deepFACS lr 3mer'].iloc[batch_tick-batch_size:batch_tick] = y_score
 
     # logreg full
-    m = pickle.load(open('/nanobody-polyreactivity/app/models/onehot_logistic_regression_CDRS_full_dist0.sav', 'rb'))
-    X_test = cdr_seqs_to_onehot(df['CDRS_withgaps_full'])
-    y_score = m.decision_function(X_test)
-    df['deepFACS lr onehot'] = y_score
+    # m = pickle.load(open('/nanobody-polyreactivity/app/models/onehot_logistic_regression_CDRS_full_dist0.sav', 'rb'))
+    # X_test = cdr_seqs_to_onehot(df['CDRS_withgaps_full'])
+    # y_score = m.decision_function(X_test)
+    # df['deepFACS lr onehot'] = y_score
+
     results_filepath = f'{results_dir}/{identifier}_scores.csv'
     df = rank_and_filter_columns(df)
     df.to_csv(results_filepath)
