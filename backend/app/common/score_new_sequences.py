@@ -210,6 +210,13 @@ def remove_invalid_sequences(filepath):
                 f.write(f'>{row.header}\n')
                 f.write(f'{row.seq}\n')
 
+
+def rank_and_filter_columns(df):
+    df = df.drop(columns = ['exp_phenotype_binary'])
+    df_wt = df.iloc[0]
+    df_ranked = df.iloc[1:].sort_values('deepFACS lr onehot')
+    return pd.concat([df_wt.to_frame().T,df_ranked]).iloc[:30]
+
 async def score_sequences(
     sequences_filepath: str,
     identifier: str,
@@ -228,61 +235,61 @@ async def score_sequences(
 
     df = get_summary_statistics(df)
 
-    # log reg
-    m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
-    X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
-    y_score = m.decision_function(X_test)
-    y_pred = m.predict(X_test)
-    df['origFACS lr onehot'] = y_score
-    batch_size = 1024
+    # # log reg
+    # m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
+    # X_test = cdr_seqs_to_onehot(df['CDRS_withgaps'])
+    # y_score = m.decision_function(X_test)
+    # y_pred = m.predict(X_test)
+    # df['origFACS lr onehot'] = y_score
+    # batch_size = 1024
 
-    # log reg with 3mers
-    m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_3mer_CDRS.sav', 'rb'))
-    if len(df)<batch_size:
-        X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'])
-        y_score = m.decision_function(X_test)
-        df['origFACS lr 3mers'] = y_score
-    else:
-        df['origFACS lr 3mers'] = np.nan
-        for batch_tick in np.append(np.arange(batch_size,len(df),batch_size),len(df)):
-            X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'].iloc[batch_tick-batch_size:batch_tick],k=3)
-            y_score = m.decision_function(X_test)
-            df['origFACS lr 3mers'].iloc[batch_tick-batch_size:batch_tick] = y_score
+    # # log reg with 3mers
+    # m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_3mer_CDRS.sav', 'rb'))
+    # if len(df)<batch_size:
+    #     X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'])
+    #     y_score = m.decision_function(X_test)
+    #     df['origFACS lr 3mers'] = y_score
+    # else:
+    #     df['origFACS lr 3mers'] = np.nan
+    #     for batch_tick in np.append(np.arange(batch_size,len(df),batch_size),len(df)):
+    #         X_test = cdr_seqs_to_kmer(df['CDRS_nogaps'].iloc[batch_tick-batch_size:batch_tick],k=3)
+    #         y_score = m.decision_function(X_test)
+    #         df['origFACS lr 3mers'].iloc[batch_tick-batch_size:batch_tick] = y_score
 
-    # CNN full
-    model = CNN(input_size = 7)
-    filepath = '/nanobody-polyreactivity/app/models/cnn_full_20.tar'
-    df['origFACS cnn onehot'] = return_scores(df,model,filepath)
+    # # CNN full
+    # model = CNN(input_size = 7)
+    # filepath = '/nanobody-polyreactivity/app/models/cnn_full_20.tar'
+    # df['origFACS cnn onehot'] = return_scores(df,model,filepath)
 
-    # RNN full
-    model = RNN(input_size = 20,
-                hidden_size = 128,
-                num_layers = 2,
-                num_classes = 1)
-    filepath = '/nanobody-polyreactivity/app/models/rnn_full_20.tar'
-    df['origFACS rnn onehot'] = return_scores(df, model, filepath, region='CDRS_nogaps', model_type='rnn', max_len=39)
+    # # RNN full
+    # model = RNN(input_size = 20,
+    #             hidden_size = 128,
+    #             num_layers = 2,
+    #             num_classes = 1)
+    # filepath = '/nanobody-polyreactivity/app/models/rnn_full_20.tar'
+    # df['origFACS rnn onehot'] = return_scores(df, model, filepath, region='CDRS_nogaps', model_type='rnn', max_len=39)
 
-    # RNN full long
-    filepath = '/nanobody-polyreactivity/app/models/rnn_CDRS_full_dist0_20.tar'
-    df['deepFACS rnn onehot'] = return_scores(df, model, filepath, region='CDRS_nogaps_full', model_type='rnn', max_len=40)
+    # # RNN full long
+    # filepath = '/nanobody-polyreactivity/app/models/rnn_CDRS_full_dist0_20.tar'
+    # df['deepFACS rnn onehot'] = return_scores(df, model, filepath, region='CDRS_nogaps_full', model_type='rnn', max_len=40)
 
-    # CNN full long
-    model = CNN(input_size = 8)
-    filepath = '/nanobody-polyreactivity/app/models/cnn_CDRS_full_dist0_10.tar'
-    df['deepFACS cnn onehot'] = return_scores(df, model, filepath, region='CDRS_withgaps_full')
+    # # CNN full long
+    # model = CNN(input_size = 8)
+    # filepath = '/nanobody-polyreactivity/app/models/cnn_CDRS_full_dist0_10.tar'
+    # df['deepFACS cnn onehot'] = return_scores(df, model, filepath, region='CDRS_withgaps_full')
 
-    # logreg 3mers full
-    m = pickle.load(open('/nanobody-polyreactivity/app/models/3mer_logistic_regression_CDRS_full_dist0.sav', 'rb'))
-    if len(df)<batch_size:
-        X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'])
-        y_score = m.decision_function(X_test)
-        df['deepFACS lr 3mer'] = y_score
-    else:
-        df['deepFACS lr 3mer'] = np.nan
-        for batch_tick in np.append(np.arange(batch_size,len(df),batch_size),len(df)):
-            X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'].iloc[batch_tick-batch_size:batch_tick],k=3)
-            y_score = m.decision_function(X_test)
-            df['deepFACS lr 3mer'].iloc[batch_tick-batch_size:batch_tick] = y_score
+    # # logreg 3mers full
+    # m = pickle.load(open('/nanobody-polyreactivity/app/models/3mer_logistic_regression_CDRS_full_dist0.sav', 'rb'))
+    # if len(df)<batch_size:
+    #     X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'])
+    #     y_score = m.decision_function(X_test)
+    #     df['deepFACS lr 3mer'] = y_score
+    # else:
+    #     df['deepFACS lr 3mer'] = np.nan
+    #     for batch_tick in np.append(np.arange(batch_size,len(df),batch_size),len(df)):
+    #         X_test = cdr_seqs_to_kmer(df['CDRS_nogaps_full'].iloc[batch_tick-batch_size:batch_tick],k=3)
+    #         y_score = m.decision_function(X_test)
+    #         df['deepFACS lr 3mer'].iloc[batch_tick-batch_size:batch_tick] = y_score
 
     # logreg full
     m = pickle.load(open('/nanobody-polyreactivity/app/models/onehot_logistic_regression_CDRS_full_dist0.sav', 'rb'))
@@ -290,4 +297,5 @@ async def score_sequences(
     y_score = m.decision_function(X_test)
     df['deepFACS lr onehot'] = y_score
     results_filepath = f'{results_dir}/{identifier}_scores.csv'
+    df = rank_and_filter_columns(df)
     df.to_csv(results_filepath)
