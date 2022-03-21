@@ -185,22 +185,8 @@ export default function ResultsPage() {
           className={classes.centered} style={{paddingTop: '4em'}}
         >
           <img
-<<<<<<< HEAD
             src={expvsmodel}
             alt='model vs low and high throughput experiment'
-=======
-            src={vsHighThroughput}
-            alt='Example histograms of all models vs high throughput.'
-            className={classes.img}
-          />
-        </Grid>
-        <Grid item xs={12} sm={12} md={12} lg={12} xl={12}
-          className={classes.centered} style={{paddingTop: '4em'}}
-        >
-          <img
-            src={vsLowThroughput}
-            alt='Example histograms of all models vs low throughput.'
->>>>>>> e870aa88adfca73353ff13a0f5b113fabb8984f8
             className={classes.img}
           />
         </Grid>

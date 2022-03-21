@@ -212,7 +212,6 @@ def remove_invalid_sequences(filepath):
 
 
 def rank_and_filter_columns(df):
-    # df = df.drop(columns = ['exp_phenotype_binary'])
     df_wt = df.iloc[0]
     df_ranked = df.iloc[1:].sort_values('origFACS lr onehot',ascending = False)
     return pd.concat([df_wt.to_frame().T,df_ranked]).iloc[:31]

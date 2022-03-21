@@ -179,6 +179,11 @@ def generate_doubles(input_seq_df):
     df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'mut2_loc'] = df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'Id'].str.findall(r'CDR\d_.\d+._CDR\d_.(\d+).').apply(lambda x: x[0])
     df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'mut2'] = df_double_muts.loc[df_double_muts.Id.str.contains(r'CDR\d_.\d+._CDR\d_.\d+.'),'Id'].str.findall(r'CDR\d_.\d+._CDR\d_.\d+(.)').apply(lambda x: x[0])
 
+    # remove - aa - or - aa aa - 
     seqs_to_drop = (df_double_muts['CDR3_withgaps'].str.contains(r'-[^-]-') | df_double_muts['CDR3_withgaps'].str.contains(r'-[^-][^-]-'))
-    df_double_muts = df_double_muts[~seqs_to_drop]
+    df_double_muts = df_double_muts.loc[~seqs_to_drop]
+
+    # remove cysteine substitutions
+    seqs_to_drop_v2 = ((df_double_muts['mut2'] == 'C')|(df_double_muts['mut1'] == 'C'))
+    df_double_muts = df_double_muts.loc[~seqs_to_drop_v2]
     return df_double_muts
