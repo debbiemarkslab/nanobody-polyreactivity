@@ -11,8 +11,9 @@ import { makeStyles } from '@mui/styles';
 
 import { scoresUrl } from '../../routes';
 import ResultsTable from '../../components/ResultsTable';
-import vsLowThroughput from './allmodels_vs_lowthroughput.png';
-import vsHighThroughput from './allmodels_vs_highthroughput.png';
+// import vsLowThroughput from './deepFACS_lr_onehot_vs_lowthroughput.png';
+// import vsHighThroughput from './deepFACS_lr_onehot_vs_highthroughput.png';
+import expvsmodel from './figures_website.png';
 
 const useStyles = makeStyles({
   heading: {
@@ -184,17 +185,8 @@ export default function ResultsPage() {
           className={classes.centered} style={{paddingTop: '4em'}}
         >
           <img
-            src={vsHighThroughput}
-            alt='Example histograms of all models vs high throughput.'
-            className={classes.img}
-          />
-        </Grid>
-        <Grid item xs={12} sm={12} md={12} lg={12} xl={12}
-          className={classes.centered} style={{paddingTop: '4em'}}
-        >
-          <img
-            src={vsLowThroughput}
-            alt='Example histograms of all models vs low throughput.'
+            src={expvsmodel}
+            alt='model vs low and high throughput experiment'
             className={classes.img}
           />
         </Grid>
