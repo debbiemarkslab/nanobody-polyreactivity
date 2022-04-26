@@ -1,4 +1,4 @@
-# nanobody-polyreactivity
+# An in silico method to assess antibody fragment polyreactivity
 
 Paper: https://www.biorxiv.org/content/10.1101/2022.01.12.476085v1.full.pdf
 
