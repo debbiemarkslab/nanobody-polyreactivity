@@ -159,7 +159,6 @@ def generate_doubles(input_seq_df):
     df_double_muts['Id'] = df_double_muts.index.astype(str)
     df_double_muts['WT_Id'] = df_double_muts['Id'].str.split('_').str[0]
 
-
     # labeling if insertion, deletion or missense
     df_double_muts.loc[df_double_muts.Id.str.contains(r'[^(CDR)]+CDR\d_-\d+\w$'),'mut1_type'] = 'insertion'
     df_double_muts.loc[df_double_muts.Id.str.contains(r'[^(CDR)]+CDR\d_\w\d+-$'),'mut1_type'] = 'deletion'
