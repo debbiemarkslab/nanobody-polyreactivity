@@ -149,7 +149,7 @@ def extract_cdrs(file):
     df['CDRS_withgaps'] = df['CDR1_withgaps'] + df['CDR2_withgaps'] + df['CDR3_withgaps']
     df['CDR1_withgaps'] = df['CDR1_withgaps'].str[:4]+df['CDR1_withgaps'].str[-4:]
     df['CDR2_withgaps'] = df['CDR2_withgaps'].str[:5]+df['CDR2_withgaps'].str[-4:]
-    df['CDR2_withgaps_full'] = df['CDR2_withgaps'].str[:5]+df['CDR2_withgaps'].str[-5:]
+    df['CDR2_withgaps_full'] = df['CDR2_withgaps_full'].str[:5]+df['CDR2_withgaps_full'].str[-5:]
     df['CDR3_withgaps'] = df['CDR3_withgaps'].apply(withgap_CDR3)
 
     df['CDR1_nogaps'] = df['CDR1_withgaps'].str.replace('-','')
@@ -230,9 +230,9 @@ async def score_sequences(
 
     df = extract_cdrs(f'{results_dir}/{identifier}_H.csv')
     if doubles and len(df) == 1:
-        df = generate_doubles(df)
+        df = generate_doubles(df.copy())
 
-    df = get_summary_statistics(df)
+    df = get_summary_statistics(df.copy())
 
     # log reg
     m = pickle.load(open('/nanobody-polyreactivity/app/models/logistic_regression_onehot_CDRS.sav', 'rb'))
