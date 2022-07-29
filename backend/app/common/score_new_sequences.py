@@ -12,6 +12,7 @@ import torch
 from app.common.utils import test_cnn,test_rnn, NonAlignedOneHotArrayDataset,OneHotArrayDataset,return_scores
 import warnings
 import time
+from app.common.plot_models import make_plots
 
 warnings.filterwarnings("ignore")
 
@@ -164,8 +165,8 @@ def extract_cdrs(file):
     return df
 
 def get_summary_statistics(df):
-    df['CDRS_IP'] = df['CDRS_nogaps'].apply(lambda x: ProteinAnalysis(x).isoelectric_point())
-    df['CDRS_HP'] = df['CDRS_nogaps'].apply(hp_index)
+    df['isoelectric point'] = df['CDRS_nogaps'].apply(lambda x: ProteinAnalysis(x).isoelectric_point())
+    df['hydrophobicity'] = df['CDRS_nogaps'].apply(hp_index)
     df['CDR1_length'] = df['CDR1_nogaps'].str.len()
     df['CDR2_length'] = df['CDR2_nogaps'].str.len()
     df['CDR3_length'] = df['CDR3_nogaps'].str.len()
@@ -291,11 +292,15 @@ async def score_sequences(
     #         df['deepFACS lr 3mer'].iloc[batch_tick-batch_size:batch_tick] = y_score
 
     # logreg full
-    # m = pickle.load(open('/nanobody-polyreactivity/app/models/onehot_logistic_regression_CDRS_full_dist0.sav', 'rb'))
-    # X_test = cdr_seqs_to_onehot(df['CDRS_withgaps_full'])
-    # y_score = m.decision_function(X_test)
-    # df['deepFACS lr onehot'] = y_score
+    m = pickle.load(open('/nanobody-polyreactivity/app/models/onehot_logistic_regression_CDRS_full_dist0.sav', 'rb'))
+    X_test = cdr_seqs_to_onehot(df['CDRS_withgaps_full'])
+    y_score = m.decision_function(X_test)
+    df['deepFACS lr onehot'] = y_score
 
     results_filepath = f'{results_dir}/{identifier}_scores.csv'
     df = rank_and_filter_columns(df)
     df.to_csv(results_filepath)
+    make_plots(df,f'{results_dir}/plots/{identifier}.pdf')
+    
+    
+    
