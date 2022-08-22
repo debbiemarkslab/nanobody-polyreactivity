@@ -7,7 +7,6 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 
 app = FastAPI()
-
 origins = [
     'http://localhost:3000',
     'localhost:3000'
@@ -20,6 +19,12 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*']
 )
+@app.get('/plots/{identifier}/')
+async def get_plots(identifier: str):
+    plots_filepath = f'/nanobody-polyreactivity/results/plots/{identifier}.pdf'
+    if not os.path.exists(plots_filepath):
+        raise HTTPException(status_code=404, detail='plots file not found')
+    return FileResponse(plots_filepath)
 
 @app.get('/scores/{identifier}/')
 async def get_scores_for_sequence(identifier: str):

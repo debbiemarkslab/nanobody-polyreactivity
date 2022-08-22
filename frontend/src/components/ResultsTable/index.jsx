@@ -5,7 +5,7 @@ export default function ResultsTable(props) {
   const resultsCSVStr = props.resultsCSVStr;
   const [results, setResults] = useState([]);
   // const headers = ['Id', 'CDR1_nogaps', 'CDR2_nogaps', 'CDR3_nogaps', 'CDRS_IP', 'CDRS_HP', 'origFACS lr onehot','origFACS lr 3mers','origFACS cnn onehot','origFACS rnn onehot','deepFACS lr onehot','deepFACS lr 3mer','deepFACS cnn onehot','deepFACS rnn onehot'];
-  const headers = ['Id', 'CDR1_nogaps', 'CDR2_nogaps', 'CDR3_nogaps', 'CDRS_IP', 'CDRS_HP', 'origFACS lr onehot'];
+  const headers = ['Id', 'CDR1_nogaps', 'CDR2_nogaps', 'CDR3_nogaps', 'isoelectric point', 'hydrophobicity', 'origFACS lr onehot','deepFACS lr onehot'];
 
   useEffect(() => {
     const fetchResultsData = () => {

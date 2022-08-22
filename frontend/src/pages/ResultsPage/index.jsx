@@ -8,12 +8,16 @@ import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import TextField from '@mui/material/TextField';
 import { makeStyles } from '@mui/styles';
-
-import { scoresUrl } from '../../routes';
+import { Document,pdfjs,Page } from 'react-pdf/dist/umd/entry.webpack';
+import { scoresUrl, scatterHistUrl } from '../../routes';
 import ResultsTable from '../../components/ResultsTable';
+pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.js`;
+
+// import { proteinScatterAndViolinPlotsBlurb } from '../../blurbs.jsx';
+// var fs = require('fs');
 // import vsLowThroughput from './deepFACS_lr_onehot_vs_lowthroughput.png';
 // import vsHighThroughput from './deepFACS_lr_onehot_vs_highthroughput.png';
-import expvsmodel from './figures_website.png';
+
 
 const useStyles = makeStyles({
   heading: {
@@ -47,9 +51,21 @@ export default function ResultsPage() {
   const { resultsId } = useParams();
   const [resultsIdValid, setResultsIdValid] = useState(true);
   const [resultsIdInput, setResultsIdInput] = useState('');
+  const [scatterHistPlotsUrl, setscatterHistPlotsUrl] = useState('');
   const [resultsStr, setResultsStr] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [loading, setLoading] = useState(true);
+  // var filename = 'no_results.png';
+  // if (resultsId) {
+  //   // console.log("$resultsId");
+  //   // filename = `http://18.224.60.30:8080/results/plots/${resultsId}.png`;
+  //   // filename = "http://18.224.60.30:8080:/logo512.png";
+  //   // filename = "http://18.224.60.30:3000/logo512.png";
+  //   console.log(filename);
+  // }
+  // else {
+  //   filename = 'no_results.png';
+  // }
 
   useEffect(() => {
     const getScoresForId = async () => {
@@ -61,6 +77,7 @@ export default function ResultsPage() {
         return;
       }
       const scoreSequenceURLWithQuery = scoresUrl(resultsId);
+      setscatterHistPlotsUrl(scatterHistUrl(resultsId));
       const fetchedResultBlob = await fetch(scoreSequenceURLWithQuery)
       .then((response) => {
         if (response.ok) {
@@ -184,11 +201,12 @@ export default function ResultsPage() {
         <Grid item xs={12} sm={12} md={12} lg={12} xl={12}
           className={classes.centered} style={{paddingTop: '4em'}}
         >
-          <img
-            src={expvsmodel}
-            alt='model vs low and high throughput experiment'
-            className={classes.img}
-          />
+          <Document
+              file={scatterHistPlotsUrl}
+              className={classes.root}
+            >
+              <Page pageNumber={1} width={1000}/>
+            </Document>
         </Grid>
       </Grid>
     </Container>
