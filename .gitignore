@@ -6,3 +6,4 @@ backend/inputs
 *.DS_Store
 *.swp
 *pycache*
+**/*.csv
